@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --legalnexus-navy: #071027;
+  --legalnexus-charcoal: #0b0f14;
+  --legalnexus-teal: #00ffd5;
+  --legalnexus-muted: #9aa6b2;
+}
+
+body{background:linear-gradient(180deg,var(--legalnexus-navy),var(--legalnexus-charcoal));}
+
+.bg-legalnexus-bg{background:linear-gradient(180deg,var(--legalnexus-navy),var(--legalnexus-charcoal))}
+.bg-legalnexus-nav{background:rgba(5,10,20,0.6);backdrop-filter:blur(4px)}
+.bg-legalnexus-card{background:rgba(255,255,255,0.02)}
+.bg-legalnexus-input{background:rgba(255,255,255,0.03)}
+.text-legalnexus-muted{color:var(--legalnexus-muted)}
+.text-legalnexus-foreground{color:#dbeafe}
+.bg-legalnexus-accent{background:linear-gradient(90deg,var(--legalnexus-teal),#00e6c4)}

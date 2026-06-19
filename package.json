@@ -1,0 +1,19 @@
+{
+  "name": "legalnexus-react",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start:backend": "node backend/index.js",
+    "start:frontend": "cd frontend && npm run dev",
+    "start": "concurrently \"npm: start:backend\" \"npm: start:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
