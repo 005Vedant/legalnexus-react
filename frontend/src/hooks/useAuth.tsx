@@ -6,28 +6,42 @@ export function useAuth() {
   const [role, setRole] = useState<string>('client')
   const [loading, setLoading] = useState(true)
 
-  const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single()
-    if (data?.role) setRole(data.role)
+  const syncUserAndRole = async (u: any) => {
+    setUser(u)
+    if (!u) {
+      setRole('client')
+      setLoading(false)
+      return
+    }
+
+    // 1. Check user_metadata for role
+    let foundRole = u.user_metadata?.role
+
+    // 2. Fetch role from profiles table
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', u.id)
+        .maybeSingle()
+      if (data?.role) {
+        foundRole = data.role
+      }
+    } catch (err) {
+      console.error('Error fetching user role:', err)
+    }
+
+    setRole(foundRole || 'client')
+    setLoading(false)
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user || null
-      setUser(u)
-      if (u) fetchRole(u.id)
-      setLoading(false)
+      syncUserAndRole(data.session?.user || null)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user || null
-      setUser(u)
-      if (u) fetchRole(u.id)
-      setLoading(false)
+      syncUserAndRole(session?.user || null)
     })
 
     return () => subscription.unsubscribe()
@@ -47,7 +61,11 @@ export function useAuth() {
     return supabase.auth.signInWithPassword({ email, password })
   }
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => {
+    setUser(null)
+    setRole('client')
+    return supabase.auth.signOut()
+  }
 
   return { user, role, loading, signUp, signIn, signOut }
 }

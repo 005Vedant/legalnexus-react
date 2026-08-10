@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase'
+import { authFetch } from '../lib/authFetch'
 
 const schema = z.object({
   name: z.string().min(2),
@@ -47,9 +48,8 @@ export default function AddLawyerDialog({ onCreated }: { onCreated?: (l: any) =>
         profile_image,
       }
 
-      const res = await fetch('/api/lawyers', {
+      const res = await authFetch('/api/lawyers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
 

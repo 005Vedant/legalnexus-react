@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,14 +9,49 @@
   --legalnexus-charcoal: #0b0f14;
   --legalnexus-teal: #00ffd5;
   --legalnexus-muted: #9aa6b2;
+  --legalnexus-card: rgba(255,255,255,0.03);
 }
 
-body{background:linear-gradient(180deg,var(--legalnexus-navy),var(--legalnexus-charcoal));}
+body{
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: linear-gradient(180deg,var(--legalnexus-navy),#071428);
+  color: #e6eef6;
+}
 
-.bg-legalnexus-bg{background:linear-gradient(180deg,var(--legalnexus-navy),var(--legalnexus-charcoal))}
-.bg-legalnexus-nav{background:rgba(5,10,20,0.6);backdrop-filter:blur(4px)}
-.bg-legalnexus-card{background:rgba(255,255,255,0.02)}
-.bg-legalnexus-input{background:rgba(255,255,255,0.03)}
+/* Responsive page container */
+.container { max-width: 1100px; padding-left: 1rem; padding-right: 1rem; }
+
+/* Standardized controls */
+.input, input, select, textarea { background: rgba(255,255,255,0.02); color: #e6eef6 }
+.input { padding: 0.75rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.06) }
+.input:focus { outline: none; box-shadow: 0 0 0 4px rgba(0, 109, 180, 0.12) }
+
+/* Button utilities (use .btn classes if needed) */
+.btn { display:inline-flex; align-items:center; justify-content:center; border-radius:0.75rem; padding:0.5rem 1rem; font-weight:600 }
+.btn-primary { background:linear-gradient(90deg,var(--legalnexus-teal),#00e6c4); color:#032029 }
+.btn-ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:inherit }
+
+
+.bg-legalnexus-bg{background:linear-gradient(180deg,var(--legalnexus-navy),#071428)}
+.bg-legalnexus-nav{background:linear-gradient(90deg,rgba(6,12,28,0.85),rgba(8,14,32,0.85));backdrop-filter:blur(4px)}
+.bg-legalnexus-card{background:var(--legalnexus-card)}
+.bg-legalnexus-input{background:rgba(255,255,255,0.02)}
 .text-legalnexus-muted{color:var(--legalnexus-muted)}
 .text-legalnexus-foreground{color:#dbeafe}
 .bg-legalnexus-accent{background:linear-gradient(90deg,var(--legalnexus-teal),#00e6c4)}
+
+/* Card utility - keep custom styles inside Tailwind layer to avoid JIT @apply issues */
+@layer components {
+  .card {
+    background-color: #ffffff; /* use light card background for readability */
+    color: #0b1220;
+    border-radius: 1rem; /* rounded-2xl */
+    padding: 1rem; /* p-4 */
+    box-shadow: 0 6px 20px rgba(2,6,23,0.08);
+    border: 1px solid rgba(2,6,23,0.06);
+  }
+
+  .muted { color: #6b7280 }
+
+  .stat { font-size: 1.25rem; font-weight: 600 }
+}
