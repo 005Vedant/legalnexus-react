@@ -19,6 +19,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// Root status route
+app.get('/', (req, res) => {
+  res.json({ message: 'LegalNexus Backend API Server is running live!', status: 'ok' });
+});
+
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ status: 'ok' });
