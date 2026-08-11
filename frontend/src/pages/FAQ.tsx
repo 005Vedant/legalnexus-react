@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { authFetch } from '../lib/authFetch'
 
 type FAQ = { id: number; question: string; answer: string }
 
@@ -223,7 +224,7 @@ export default function FAQ() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/faqs')
+    authFetch('/api/faqs')
       .then(r => r.json())
       .then(data => { setFaqs(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => { setFaqs([]); setLoading(false) })
