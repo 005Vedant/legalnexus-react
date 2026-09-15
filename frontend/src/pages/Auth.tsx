@@ -324,11 +324,6 @@ export default function Auth() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <p className="text-center text-[11px] text-[#2a3550] pb-4 px-4">
-        LegalNexus is a technology platform, not a law firm. Advocate engagements are made directly with independent legal professionals.
-      </p>
     </div>
   )
 }

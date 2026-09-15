@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -30,6 +30,7 @@ function RoleDashboard() {
 
 export default function App() {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="flex justify-center items-center h-screen text-gray-600">Loading...</div>
 
   return (
@@ -47,7 +48,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <Footer />
+      {location.pathname !== '/auth' && <Footer />}
     </div>
   )
 }
