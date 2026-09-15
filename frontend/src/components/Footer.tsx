@@ -6,13 +6,16 @@ export default function Footer() {
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | null>(null)
 
   return (
-    <footer className="bg-legalnexus-nav text-white mt-16">
+    <footer className="bg-slate-950 text-white border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 
           {/* Brand */}
           <div className="md:col-span-1">
-            <h2 className="text-xl font-bold mb-3">⚖️ LegalNexus</h2>
+            <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+              <img src="/logo.jpg" alt="LegalNexus Logo" className="w-8 h-8 rounded-lg object-contain" />
+              <span className="bg-gradient-to-r from-[#5b86ff] via-[#c084fc] to-[#efb75a] bg-clip-text text-transparent">LegalNexus</span>
+            </h2>
             <p className="text-gray-400 text-sm leading-relaxed">
               Your trusted legal intelligence platform. Connecting clients with expert lawyers across India.
             </p>

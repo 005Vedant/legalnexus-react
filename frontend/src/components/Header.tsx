@@ -219,35 +219,53 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Navigation Menu */}
+      {/* Mobile Floating Dropdown Box Overlay */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-legalnexus-nav px-4 py-3 flex flex-col gap-1">
-          {navLinks.map(link => (
-            <Link
-              key={link.to}
-              to={link.to}
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 text-sm text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition font-medium"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="border-t border-white/10 mt-2 pt-2">
-            <Link
-              to="/profile"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 text-sm text-white/90 hover:text-white rounded-lg hover:bg-white/10 transition font-medium flex items-center gap-2"
-            >
-              👤 My Profile
-            </Link>
-            <button
-              onClick={() => { setMobileMenuOpen(false); handleSignOut() }}
-              className="w-full text-left px-3 py-2.5 text-sm text-red-300 hover:text-red-200 rounded-lg hover:bg-white/10 transition font-medium flex items-center gap-2 mt-1"
-            >
-              🚪 Sign Out
-            </button>
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="md:hidden absolute top-full right-4 left-4 sm:left-auto sm:w-72 bg-legalnexus-nav border border-white/15 rounded-2xl p-4 shadow-2xl z-50 animate-fadeIn space-y-3 mt-2">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2 px-1">
+              <span className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider">Navigation Menu</span>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-white/60 hover:text-white p-1 text-xs font-bold rounded-lg hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-1">
+              {navLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-white/90 hover:text-white rounded-xl hover:bg-white/10 transition"
+                >
+                  <span>{link.label}</span>
+                  <span className="text-white/40 text-xs">→</span>
+                </Link>
+              ))}
+            </div>
+            <div className="border-t border-white/10 pt-2 space-y-1">
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 text-xs font-semibold text-white/90 hover:text-white rounded-xl hover:bg-white/10 transition flex items-center gap-2"
+              >
+                👤 My Profile
+              </Link>
+              <button
+                onClick={() => { setMobileMenuOpen(false); handleSignOut() }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-red-300 hover:text-red-200 rounded-xl hover:bg-white/10 transition flex items-center gap-2"
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </header>
   )

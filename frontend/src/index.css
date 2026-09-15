@@ -1,57 +1,155 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Plus+Jakarta+Sans:wght@400..800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root{
-  --legalnexus-navy: #071027;
-  --legalnexus-charcoal: #0b0f14;
-  --legalnexus-teal: #00ffd5;
-  --legalnexus-muted: #9aa6b2;
-  --legalnexus-card: rgba(255,255,255,0.03);
+:root, [data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #060a14;
+  --bg-2: #0a1020;
+  --band: #0d1426;
+  --card: rgba(255, 255, 255, 0.038);
+  --card-solid: #101827;
+  --card-2: rgba(255, 255, 255, 0.065);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.18);
+  --ink: #eaf0fb;
+  --ink-strong: #ffffff;
+  --muted: #93a1c2;
+  --faint: #6b7799;
+  --accent: #5b86ff;
+  --accent-soft: rgba(91, 134, 255, 0.14);
+  --accent-ink: #ffffff;
+  --gold: #efb75a;
+  --gold-ink: #1a1206;
+  --gold-soft: rgba(239, 183, 90, 0.14);
+  --good: #4ade9b;
+  --shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+  --glow-a: rgba(91, 134, 255, 0.35);
+  --glow-b: rgba(239, 183, 90, 0.16);
+  --grid: rgba(255, 255, 255, 0.045);
 }
 
-body{
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-  background: linear-gradient(180deg,var(--legalnexus-navy),#071428);
-  color: #e6eef6;
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Responsive page container */
-.container { max-width: 1100px; padding-left: 1rem; padding-right: 1rem; }
+.font-display {
+  font-family: 'Fraunces', Georgia, serif;
+}
 
-/* Standardized controls */
-.input, input, select, textarea { background: rgba(255,255,255,0.02); color: #e6eef6 }
-.input { padding: 0.75rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.06) }
-.input:focus { outline: none; box-shadow: 0 0 0 4px rgba(0, 109, 180, 0.12) }
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
 
-/* Button utilities (use .btn classes if needed) */
-.btn { display:inline-flex; align-items:center; justify-content:center; border-radius:0.75rem; padding:0.5rem 1rem; font-weight:600 }
-.btn-primary { background:linear-gradient(90deg,var(--legalnexus-teal),#00e6c4); color:#032029 }
-.btn-ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:inherit }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
 
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 30%, #5b86ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-.bg-legalnexus-bg{background:linear-gradient(180deg,var(--legalnexus-navy),#071428)}
-.bg-legalnexus-nav{background:linear-gradient(90deg,rgba(6,12,28,0.85),rgba(8,14,32,0.85));backdrop-filter:blur(4px)}
-.bg-legalnexus-card{background:var(--legalnexus-card)}
-.bg-legalnexus-input{background:rgba(255,255,255,0.02)}
-.text-legalnexus-muted{color:var(--legalnexus-muted)}
-.text-legalnexus-foreground{color:#dbeafe}
-.bg-legalnexus-accent{background:linear-gradient(90deg,var(--legalnexus-teal),#00e6c4)}
+.text-gradient-gold {
+  background: linear-gradient(135deg, #ffffff 40%, #efb75a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-/* Card utility - keep custom styles inside Tailwind layer to avoid JIT @apply issues */
-@layer components {
-  .card {
-    background-color: #ffffff; /* use light card background for readability */
-    color: #0b1220;
-    border-radius: 1rem; /* rounded-2xl */
-    padding: 1rem; /* p-4 */
-    box-shadow: 0 6px 20px rgba(2,6,23,0.08);
-    border: 1px solid rgba(2,6,23,0.06);
+.grid-bg {
+  background-image: 
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.dot-bg {
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+@keyframes drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
   }
+  50% {
+    transform: translate(30px, -20px) scale(1.08);
+  }
+}
 
-  .muted { color: #6b7280 }
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
 
-  .stat { font-size: 1.25rem; font-weight: 600 }
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.anim-drift {
+  animation: drift 14s ease-in-out infinite;
+}
+
+.anim-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.anim-pulse {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.anim-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.anim-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #060a14;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5b86ff;
 }
