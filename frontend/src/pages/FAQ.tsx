@@ -1,274 +1,148 @@
 import React, { useEffect, useState } from 'react'
 import { authFetch } from '../lib/authFetch'
+import ClientNav from '../components/ClientNav'
 
 type FAQ = { id: number; question: string; answer: string }
 
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-  .faq-root * { box-sizing: border-box; }
-  .faq-root {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color: #0F1C2E;
-    background: #F7F8FA;
-    min-height: 100vh;
-    padding: 48px 16px;
-  }
-
-  .faq-inner { max-width: 720px; margin: 0 auto; }
-
-  /* ── Header ── */
-  .faq-eyebrow {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #C9A84C;
-    margin-bottom: 10px;
-  }
-  .faq-heading {
-    font-size: 32px;
-    font-weight: 700;
-    color: #0F1C2E;
-    font-family: Georgia, serif;
-    margin: 0 0 8px;
-  }
-  .faq-subheading {
-    font-size: 15px;
-    color: #6B7A8D;
-    margin: 0 0 40px;
-    line-height: 1.6;
-  }
-
-  /* ── Loading ── */
-  .faq-loading {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 40px 0;
-  }
-  .faq-spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid #DDE3EC;
-    border-top-color: #C9A84C;
-    border-radius: 50%;
-    animation: faq-spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes faq-spin { to { transform: rotate(360deg); } }
-  .faq-loading-text { font-size: 14px; color: #6B7A8D; }
-
-  /* ── Empty ── */
-  .faq-empty {
-    text-align: center;
-    padding: 60px 24px;
-    background: #FFFFFF;
-    border: 1px solid #E4E9F0;
-    border-radius: 16px;
-  }
-  .faq-empty-icon { font-size: 36px; margin-bottom: 12px; }
-  .faq-empty-text { font-size: 14px; color: #6B7A8D; }
-
-  /* ── Accordion list ── */
-  .faq-list { display: flex; flex-direction: column; gap: 10px; }
-
-  /* ── Accordion item ── */
-  .faq-item {
-    background: #FFFFFF;
-    border: 1px solid #E4E9F0;
-    border-left: 4px solid #C9A84C;
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(15,28,46,0.05);
-    transition: box-shadow 0.15s;
-  }
-  .faq-item:hover { box-shadow: 0 4px 16px rgba(15,28,46,0.09); }
-  .faq-item.open { border-left-color: #C9A84C; }
-
-  /* ── Trigger button ── */
-  .faq-trigger {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 18px 20px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
-    color: #0F1C2E;
-  }
-  .faq-trigger:focus-visible {
-    outline: 2px solid #C9A84C;
-    outline-offset: -2px;
-    border-radius: 12px;
-  }
-  .faq-question {
-    font-size: 15px;
-    font-weight: 600;
-    color: #0F1C2E;
-    line-height: 1.45;
-    flex: 1;
-  }
-  .faq-item.open .faq-question { color: #1E3A5F; }
-
-  /* ── Chevron ── */
-  .faq-chevron {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #F7F8FA;
-    border: 1px solid #DDE3EC;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: transform 0.25s ease, background 0.15s, border-color 0.15s;
-  }
-  .faq-item.open .faq-chevron {
-    transform: rotate(180deg);
-    background: #C9A84C;
-    border-color: #C9A84C;
-  }
-  .faq-chevron svg { display: block; }
-  .faq-item.open .faq-chevron svg path { stroke: #0F1C2E; }
-
-  /* ── Answer panel ── */
-  .faq-body {
-    overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.25s ease;
-    max-height: 0;
-    opacity: 0;
-  }
-  .faq-item.open .faq-body {
-    max-height: 600px;
-    opacity: 1;
-  }
-  .faq-answer {
-    padding: 0 20px 20px;
-    font-size: 14px;
-    color: #6B7A8D;
-    line-height: 1.7;
-    border-top: 1px solid #F0F2F5;
-    padding-top: 14px;
-    margin: 0 20px;
-  }
-
-  /* ── Footer note ── */
-  .faq-footer {
-    margin-top: 36px;
-    padding: 20px 24px;
-    background: #FFFFFF;
-    border: 1px solid #E4E9F0;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .faq-footer-text {
-    font-size: 14px;
-    color: #6B7A8D;
-  }
-  .faq-footer-text strong { color: #0F1C2E; font-weight: 600; }
-  .faq-contact-link {
-    padding: 9px 20px;
-    background: #0F1C2E;
-    color: #C9A84C;
-    font-size: 13px;
-    font-weight: 700;
-    border-radius: 9px;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background 0.15s;
-    font-family: inherit;
-  }
-  .faq-contact-link:hover { background: #1E3A5F; }
-`
-
-function AccordionItem({ faq, index }: { faq: FAQ; index: number }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className={`faq-item${open ? ' open' : ''}`}>
-      <button
-        className="faq-trigger"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-      >
-        <span className="faq-question">
-          <span style={{ color: '#C9A84C', fontWeight: 700, marginRight: 10, fontSize: 13 }}>
-            {String(index + 1).padStart(2, '0')}
-          </span>
-          {faq.question}
-        </span>
-        <span className="faq-chevron" aria-hidden="true">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 4L6 8L10 4" stroke="#6B7A8D" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </span>
-      </button>
-      <div className="faq-body" aria-hidden={!open}>
-        <p className="faq-answer">{faq.answer}</p>
-      </div>
-    </div>
-  )
-}
+const FALLBACK_FAQS: FAQ[] = [
+  {
+    id: 1,
+    question: 'How do I submit a new case to LegalNexus?',
+    answer:
+      'Log into your client portal and navigate to "Submit a case". Fill in your matter type, court location, and brief summary. You can also securely attach supporting documents like FIR copies or contracts in the encrypted vault.',
+  },
+  {
+    id: 2,
+    question: 'How are lawyers matched with my legal brief?',
+    answer:
+      'Our legal matching system analyzes your case domain, court jurisdiction, and urgency to recommend bar-verified advocates with proven trial or appellate experience in your practice area.',
+  },
+  {
+    id: 3,
+    question: 'Is my case information secure and confidential?',
+    answer:
+      'Yes. All case details, client identities, and uploaded documents are encrypted with AES-256 standards. Your files are never made public and are shared solely with the counsel you authorize.',
+  },
+  {
+    id: 4,
+    question: 'How do fixed-fee consultations work?',
+    answer:
+      'Every verified lawyer displays their transparent initial consultation fee upfront. You can book an appointment directly through the directory without any hidden platform charges.',
+  },
+  {
+    id: 5,
+    question: 'Can I track upcoming hearing dates and cause lists?',
+    answer:
+      'Yes! Your client dashboard provides live progress bars, upcoming hearing dates, stage notifications, and direct message channels with your assigned advocate.',
+  },
+]
 
 export default function FAQ() {
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [loading, setLoading] = useState(true)
+  const [openIds, setOpenIds] = useState<Set<number>>(new Set([1]))
 
   useEffect(() => {
     authFetch('/api/faqs')
-      .then(r => r.json())
-      .then(data => { setFaqs(Array.isArray(data) ? data : []); setLoading(false) })
-      .catch(() => { setFaqs([]); setLoading(false) })
+      .then(res => (res.ok ? res.json() : []))
+      .then((data: FAQ[]) => {
+        setFaqs(Array.isArray(data) && data.length > 0 ? data : FALLBACK_FAQS)
+      })
+      .catch(() => setFaqs(FALLBACK_FAQS))
+      .finally(() => setLoading(false))
   }, [])
 
+  const toggle = (id: number) => {
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
-    <div className="faq-root">
-      <style>{styles}</style>
-      <div className="faq-inner">
+    <div className="min-h-screen bg-bg text-ink">
+      <ClientNav />
+      <div className="py-10 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <span className="eyebrow inline-flex items-center gap-2 text-gold">
+            <span className="h-px w-6 bg-gold/60" /> Frequently Asked Questions
+          </span>
+          <h1 className="mt-3 font-display text-[clamp(2.2rem,4.5vw,3rem)] font-bold text-inkstrong">
+            Help & Guidance
+          </h1>
+          <p className="mt-2 text-[0.95rem] text-muted max-w-xl mx-auto">
+            Everything you need to know about LegalNexus, verified advocates, hearing tracking, and our encrypted workspace.
+          </p>
+        </div>
 
-        <div className="faq-eyebrow">LegalNexus — Help Centre</div>
-        <h1 className="faq-heading">Frequently Asked Questions</h1>
-        <p className="faq-subheading">
-          Everything you need to know about using the platform — submitting cases,
-          working with lawyers, and managing your account.
-        </p>
-
-        {loading ? (
-          <div className="faq-loading">
-            <div className="faq-spinner" />
-            <span className="faq-loading-text">Loading questions…</span>
-          </div>
-        ) : faqs.length === 0 ? (
-          <div className="faq-empty">
-            <div className="faq-empty-icon">💬</div>
-            <p className="faq-empty-text">No FAQs available yet. Check back soon.</p>
-          </div>
-        ) : (
-          <div className="faq-list">
-            {faqs.map((f, i) => (
-              <AccordionItem key={f.id} faq={f} index={i} />
-            ))}
+        {/* Loading state */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="size-8 rounded-full border-2 border-line border-t-accent animate-spin" />
+            <p className="text-sm text-muted">Loading answers…</p>
           </div>
         )}
 
-        <div className="faq-footer">
-          <p className="faq-footer-text">
-            Still have questions? <strong>Our support team is here to help.</strong>
+        {/* FAQ Accordion List */}
+        {!loading && (
+          <div className="space-y-3.5">
+            {faqs.map(faq => {
+              const isOpen = openIds.has(faq.id)
+              return (
+                <div
+                  key={faq.id}
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-[var(--shadow)] ${
+                    isOpen
+                      ? 'border-accent/40 bg-cardsolid'
+                      : 'border-line bg-card hover:border-line2 hover:bg-card2'
+                  }`}
+                >
+                  <button
+                    onClick={() => toggle(faq.id)}
+                    className="w-full flex items-center justify-between gap-4 p-5 text-left cursor-pointer transition-colors"
+                  >
+                    <span className="text-[0.95rem] font-semibold text-inkstrong leading-snug">
+                      {faq.question}
+                    </span>
+                    <span
+                      className={`grid size-7 shrink-0 place-items-center rounded-lg border border-line bg-card text-xs font-bold transition-transform duration-200 ${
+                        isOpen ? 'rotate-180 text-accent border-accent/40 bg-accentsoft' : 'text-faint'
+                      }`}
+                    >
+                      ▼
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-5 pb-5 pt-1 text-[0.88rem] leading-relaxed text-muted border-t border-line/50 anim-rise">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Support Callout Box */}
+        <div className="mt-12 rounded-3xl border border-line bg-cardsolid p-6 sm:p-8 text-center shadow-[var(--shadow)]">
+          <span className="text-3xl mb-2 block">💬</span>
+          <h3 className="font-display text-xl font-bold text-inkstrong">Still have questions?</h3>
+          <p className="mt-1.5 text-sm text-muted max-w-md mx-auto">
+            Our legal intelligence and technical support team is available Monday to Saturday, 9 AM – 6 PM IST.
           </p>
-          <a href="mailto:vedantsathe3107@gmail.com" className="faq-contact-link">
-            Contact Support
+          <a
+            href="mailto:support@legalnexus.in?subject=Help%20Request"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-accent text-accentink px-5 py-2.5 text-xs font-bold shadow-[0_4px_16px_-4px_var(--glow-a)] hover:brightness-110 transition cursor-pointer"
+          >
+            Contact Support Team →
           </a>
         </div>
-
+        </div>
       </div>
     </div>
   )

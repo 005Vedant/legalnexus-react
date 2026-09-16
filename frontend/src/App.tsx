@@ -29,13 +29,16 @@ function RoleDashboard() {
 }
 
 export default function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, role } = useAuth()
   const location = useLocation()
   if (loading) return <div className="flex justify-center items-center h-screen text-gray-600">Loading...</div>
 
+  // Hide the global header/footer for all client pages — they use their own nav
+  const isClientShell = user && role === 'client'
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {user && <Header />}
+    <div className="min-h-screen bg-bg text-ink flex flex-col">
+      {user && !isClientShell && <Header />}
       <main className="flex-1">
         <Routes>
           <Route path="/" element={user ? <RoleDashboard /> : <Home />} />
@@ -48,7 +51,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {location.pathname !== '/auth' && <Footer />}
+      {location.pathname !== '/auth' && !isClientShell && <Footer />}
     </div>
   )
 }

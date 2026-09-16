@@ -7,14 +7,24 @@ function getUserRole(user) {
   return user?.user_metadata?.role || user?.role || 'client';
 }
 
+let cachedLawyers = null;
+let lawyersCacheExpiresAt = 0;
+
 // Get all lawyers
 router.get('/', auth, async (req, res) => {
   try {
+    if (cachedLawyers && Date.now() < lawyersCacheExpiresAt) {
+      return res.json(cachedLawyers);
+    }
+
     const { data, error } = await supabase
       .from('lawyers')
       .select('*')
       .order('created_at', { ascending: true });
     if (error) return res.status(500).json({ error });
+
+    cachedLawyers = data;
+    lawyersCacheExpiresAt = Date.now() + 20 * 1000;
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

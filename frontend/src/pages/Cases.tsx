@@ -1,405 +1,436 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
 import { authFetch } from '../lib/authFetch'
+import ClientNav from '../components/ClientNav'
+import DocumentViewerModal from '../components/DocumentViewerModal'
 
-const FF = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-
-const STATUS_CFG: Record<string, { color: string; bg: string; border: string; dot: string; label: string }> = {
-  'Pending':           { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A', dot: '#F59E0B', label: '⏳ Pending' },
-  'In Progress':       { color: '#1E40AF', bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6', label: '🔄 In Progress' },
-  'Hearing Scheduled': { color: '#5B21B6', bg: '#F5F3FF', border: '#DDD6FE', dot: '#8B5CF6', label: '📅 Hearing Scheduled' },
-  'Resolved':          { color: '#065F46', bg: '#ECFDF5', border: '#A7F3D0', dot: '#10B981', label: '✅ Resolved' },
-  'Closed':            { color: '#374151', bg: '#F9FAFB', border: '#E5E7EB', dot: '#6B7280', label: '🔒 Closed' },
+/* ── Icons ──────────────────────────────────────────────────────── */
+function ScaleIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></svg>
+}
+function CalendarIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+}
+function PinIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+}
+function DocIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+}
+function MessageIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+}
+function AdvocateIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+}
+function ShieldLockIcon({ className = 'size-3' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><circle cx="12" cy="11" r="1.5" /><path d="M12 12.5V15" /></svg>
+}
+function ArrowRightIcon({ className = 'size-4' }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
 }
 
-const BASE_INPUT: React.CSSProperties = {
-  fontFamily: FF, width: '100%', padding: '11px 14px',
-  border: '1.5px solid #E2E8F0', borderRadius: 10, fontSize: 14,
-  color: '#0F172A', background: '#F8FAFC', outline: 'none',
-  boxSizing: 'border-box', transition: 'all 0.15s',
+/* ── Status config ──────────────────────────────────────────────── */
+const STATUS_BADGES: Record<string, string> = {
+  'Pending': 'border-gold/30 bg-goldsoft text-gold',
+  'Hearing scheduled': 'border-accent/30 bg-accentsoft text-accent',
+  'In progress': 'border-good/30 bg-good/10 text-good',
+  'Order reserved': 'border-line bg-card2 text-muted',
 }
 
-const LABEL_S: React.CSSProperties = {
-  display: 'block', fontSize: 11, fontWeight: 700,
-  color: '#475569', textTransform: 'uppercase',
-  letterSpacing: '0.06em', marginBottom: 6,
+type CaseStatus = 'Pending' | 'In progress' | 'Hearing scheduled' | 'Order reserved'
+
+type CaseItem = {
+  id: string
+  shortId: string
+  title: string
+  type: string
+  stage: string
+  status: CaseStatus
+  progress: number
+  court: string
+  next: string
+  advocate: string
+  last: string
+  document_url?: string | null
 }
 
-/* ── tiny reusable components ── */
-function FInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const [f, setF] = useState(false)
+/* ── Badge primitive ────────────────────────────────────────────── */
+function Badge({ children, tone = 'line' }: { children: React.ReactNode; tone?: 'line' | 'accent' | 'gold' | 'good' }) {
+  const tones = {
+    line: 'border-line bg-card2 text-faint',
+    accent: 'border-accent/30 bg-accentsoft text-accent',
+    gold: 'border-gold/30 bg-goldsoft text-gold',
+    good: 'border-good/30 bg-good/10 text-good',
+  }
+  return <span className={`eyebrow rounded-full border px-2.5 py-1 ${tones[tone]}`}>{children}</span>
+}
+
+/* ── Action button ──────────────────────────────────────────────── */
+function ActionButton({ children, variant = 'primary', className = '', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'outline' }) {
+  const v = {
+    primary: 'bg-accent text-accentink shadow-[0_8px_24px_-10px_var(--glow-a)] hover:brightness-110 font-semibold',
+    outline: 'border border-line bg-card text-ink hover:border-accent hover:text-accent',
+  }
   return (
-    <input {...props}
-      style={{ ...BASE_INPUT, borderColor: f ? '#2563EB' : '#E2E8F0', boxShadow: f ? '0 0 0 3px rgba(37,99,235,0.10)' : 'none', background: f ? '#fff' : '#F8FAFC' }}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-    />
-  )
-}
-
-function FSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  const [f, setF] = useState(false)
-  return (
-    <select {...props}
-      style={{ ...BASE_INPUT, borderColor: f ? '#2563EB' : '#E2E8F0', boxShadow: f ? '0 0 0 3px rgba(37,99,235,0.10)' : 'none', background: f ? '#fff' : '#F8FAFC', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 36, cursor: 'pointer' }}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-    >
-      {props.children}
-    </select>
-  )
-}
-
-function FTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const [f, setF] = useState(false)
-  return (
-    <textarea {...props}
-      style={{ ...BASE_INPUT, borderColor: f ? '#2563EB' : '#E2E8F0', boxShadow: f ? '0 0 0 3px rgba(37,99,235,0.10)' : 'none', background: f ? '#fff' : '#F8FAFC', height: 120, resize: 'none' }}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-    />
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={LABEL_S}>{label}</label>
+    <button className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[0.82rem] transition-all duration-200 cursor-pointer ${v[variant]} ${className}`} {...props}>
       {children}
+    </button>
+  )
+}
+
+/* ── Pill filter button ─────────────────────────────────────────── */
+function PillButton({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[0.78rem] font-medium transition-all duration-300 cursor-pointer ${
+        active
+          ? 'border-accent bg-accent text-accentink shadow-[0_8px_22px_-12px_var(--glow-a)] font-semibold'
+          : 'border-line bg-card text-muted hover:border-line2 hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+/* ── Case card list ─────────────────────────────────────────────── */
+function CaseCardsList({ cases, selected, onSelect }: { cases: CaseItem[]; selected: string; onSelect: (id: string) => void }) {
+  if (cases.length === 0) {
+    return (
+      <div className="rounded-3xl border border-dashed border-line2 p-8 text-center bg-card/40">
+        <ScaleIcon className="size-8 text-faint mx-auto mb-2 opacity-60" />
+        <p className="font-semibold text-[0.95rem] text-inkstrong">No cases submitted yet</p>
+        <p className="mt-1 text-[0.78rem] text-muted">Click "Submit a case" to brief your matter with verified legal counsel.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {cases.map(item => {
+        const isSelected = selected === item.id
+        return (
+          <button
+            key={item.id}
+            onClick={() => onSelect(item.id)}
+            className={`group w-full rounded-2xl border p-4 text-left transition-all duration-300 cursor-pointer ${
+              isSelected
+                ? 'border-accent bg-accentsoft/40 shadow-[0_10px_26px_-20px_var(--glow-a)]'
+                : 'border-line bg-card hover:border-line2 hover:bg-card2'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-mono text-[0.63rem] uppercase tracking-[0.14em] text-faint">{item.shortId}</p>
+                <p className="mt-1 truncate text-[0.88rem] font-semibold text-inkstrong">{item.title}</p>
+                <p className="mt-1 truncate text-[0.72rem] text-muted">{item.type} · {item.stage}</p>
+              </div>
+              <span className={`shrink-0 rounded-full border px-2 py-1 text-[0.59rem] font-semibold ${STATUS_BADGES[item.status] || 'border-line bg-card text-muted'}`}>
+                {item.status.toUpperCase()}
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="mt-3.5 h-1 overflow-hidden rounded-full bg-card2">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-accent to-gold transition-all duration-700"
+                style={{ width: `${item.progress}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[0.68rem] text-faint">
+              <span className="flex min-w-0 items-center gap-1.5 truncate">
+                <CalendarIcon className="size-3 shrink-0 text-gold" /> {item.next}
+              </span>
+              <span className="font-mono">{item.progress}%</span>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-function StatusPill({ status }: { status: string }) {
-  const c = STATUS_CFG[status] || STATUS_CFG['Pending']
+/* ── Case detail pane ───────────────────────────────────────────── */
+function CaseDetailPane({
+  item,
+  onToast,
+  onViewDocs,
+}: {
+  item: CaseItem
+  onToast: (t: string, b: string) => void
+  onViewDocs: (item: CaseItem) => void
+}) {
+  const steps = ['Case brief submitted', 'Advocate engaged', 'Documents reviewed', item.stage, 'Final order']
+  const currentStep = Math.max(1, Math.ceil(item.progress / 24))
+
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, background: c.bg, color: c.color, border: `1px solid ${c.border}`, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' as const }}>
-      <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.dot, flexShrink: 0, display: 'inline-block' }} />
-      {c.label}
-    </span>
-  )
-}
-
-function MetaChip({ icon, label, value, accent }: { icon: string; label: string; value: string; accent?: boolean }) {
-  return (
-    <div style={{ background: accent ? '#F5F3FF' : '#F8FAFC', border: `1px solid ${accent ? '#DDD6FE' : '#F1F5F9'}`, borderRadius: 11, padding: '10px 14px', textAlign: 'center' as const }}>
-      <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-      <p style={{ fontSize: 10, color: accent ? '#7C3AED' : '#94A3B8', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-      <p style={{ fontSize: 12, color: accent ? '#4C1D95' : '#0F172A', fontWeight: 700, marginTop: 3 }}>{value}</p>
-    </div>
-  )
-}
-
-/* ── main component ── */
-export default function Cases() {
-  const { user, role } = useAuth()
-  const [cases, setCases] = useState<any[]>([])
-  const [lawyers, setLawyers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ title: '', description: '', case_type: '', case_date: '', case_location: '', assigned_lawyer_id: '' })
-  const [caseFile, setCaseFile] = useState<File | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [msgType, setMsgType] = useState<'success' | 'error' | ''>('')
-  const [showForm, setShowForm] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
-
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const [casesRes, lawyersRes] = await Promise.all([
-        authFetch('/api/cases'),
-        authFetch('/api/lawyers')
-      ])
-      setCases(casesRes.ok ? await casesRes.json() : [])
-      setLawyers(lawyersRes.ok ? await lawyersRes.json() : [])
-    } catch (err) {
-      console.error('Failed to load data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { fetchData() }, [])
-
-  const submitCase = async () => {
-    if (!form.title || !form.description) { setMsgType('error'); return }
-    setSubmitting(true); setMsgType('')
-    let document_url = null
-    if (caseFile) {
-      const ext = caseFile.name.split('.').pop()
-      const path = `${user?.id}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('case-documents').upload(path, caseFile, { upsert: true })
-      if (!uploadError) {
-        const { data } = supabase.storage.from('case-documents').getPublicUrl(path)
-        document_url = data.publicUrl
-      }
-    }
-    const res = await authFetch('/api/cases', {
-      method: 'POST',
-      body: JSON.stringify({ title: form.title, description: form.description, case_type: form.case_type, hearing_date: form.case_date ? new Date(form.case_date).toISOString() : null, case_location: form.case_location, assigned_lawyer_id: form.assigned_lawyer_id || null, client_id: user?.id, status: 'Pending', document_url }),
-    })
-    if (res.ok) {
-      setMsgType('success')
-      setForm({ title: '', description: '', case_type: '', case_date: '', case_location: '', assigned_lawyer_id: '' })
-      setCaseFile(null); setShowForm(false); fetchData()
-    } else { setMsgType('error') }
-    setSubmitting(false)
-  }
-
-  const deleteCase = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this case?')) return
-    await authFetch(`/api/cases/${id}`, { method: 'DELETE' })
-    fetchData()
-  }
-
-  /* ── loading ── */
-  if (loading) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 260, gap: 16, fontFamily: FF }}>
-      <div style={{ width: 38, height: 38, border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <span style={{ fontSize: 14, fontWeight: 500, color: '#64748B' }}>Loading cases…</span>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
-
-  /* ── page ── */
-  return (
-    <section style={{ maxWidth: 880, margin: '0 auto', padding: '36px 22px', fontFamily: FF }}>
-
-      {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, gap: 16, flexWrap: 'wrap' as const }}>
+    <div className="rounded-3xl border border-line bg-cardsolid p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>📋</div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.4px' }}>
-              {role === 'client' ? 'My Cases' : 'All Cases'}
-            </h1>
-          </div>
-          <p style={{ color: '#94A3B8', fontSize: 13, margin: 0, paddingLeft: 46, fontWeight: 500 }}>
-            {role === 'client'
-              ? `${cases.length} case${cases.length !== 1 ? 's' : ''} submitted`
-              : `${cases.length} case${cases.length !== 1 ? 's' : ''} in the system`}
+          <p className="eyebrow text-accent">Selected matter</p>
+          <h2 className="mt-2 font-display text-[1.35rem] font-bold leading-snug text-inkstrong">{item.title}</h2>
+          <p className="mt-1.5 flex items-center gap-1.5 text-[0.76rem] text-muted">
+            <PinIcon className="size-3.5 text-gold" /> {item.court}
           </p>
         </div>
-
-        {role === 'client' && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            style={{ padding: '11px 22px', borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', transition: 'all 0.15s', background: showForm ? '#F1F5F9' : 'linear-gradient(135deg,#1E3A5F,#2563EB)', color: showForm ? '#64748B' : '#fff', boxShadow: showForm ? 'none' : '0 4px 14px rgba(37,99,235,0.30)', letterSpacing: '0.01em' }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            {showForm ? '✕  Cancel' : '＋  Submit New Case'}
-          </button>
-        )}
+        <Badge tone={item.status === 'In progress' ? 'good' : item.status === 'Pending' ? 'gold' : 'accent'}>
+          {item.status}
+        </Badge>
       </div>
 
-      {/* ── Submit Form ── */}
-      {showForm && role === 'client' && (
-        <div style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #E2E8F0', boxShadow: '0 8px 32px rgba(15,23,42,0.10)', marginBottom: 32, overflow: 'hidden' }}>
-
-          {/* form header */}
-          <div style={{ background: 'linear-gradient(135deg,#0F172A 0%,#1E3A5F 50%,#2563EB 100%)', padding: '24px 30px' }}>
-            <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Submit a New Case</h2>
-            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginTop: 5 }}>Fill in your case details below — all information is kept confidential.</p>
+      {/* Meta tiles */}
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {[
+          { k: 'Next date', v: item.next, Icon: CalendarIcon },
+          { k: 'Stage', v: item.stage, Icon: ScaleIcon },
+          { k: 'Your advocate', v: item.advocate, Icon: AdvocateIcon },
+        ].map(detail => (
+          <div key={detail.k} className="rounded-2xl border border-line bg-card2 p-3 last:col-span-2 sm:last:col-span-1">
+            <detail.Icon className="size-4 text-gold" />
+            <p className="mt-2 text-[0.63rem] text-faint">{detail.k}</p>
+            <p className="mt-1 text-[0.77rem] font-semibold leading-snug text-ink">{detail.v}</p>
           </div>
+        ))}
+      </div>
 
-          <div style={{ padding: '30px' }}>
-            {/* feedback */}
-            {msgType === 'success' && (
-              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 11, padding: '12px 16px', fontSize: 13, color: '#15803D', marginBottom: 22, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                ✅ Case submitted successfully!
-              </div>
-            )}
-            {msgType === 'error' && (
-              <div style={{ background: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: 11, padding: '12px 16px', fontSize: 13, color: '#BE123C', marginBottom: 22, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                ⚠️ Please fill in the case title and description.
-              </div>
-            )}
-
-            <Field label="Case Title *">
-              <FInput value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Brief title of your case" />
-            </Field>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+      {/* Timeline */}
+      <div className="mt-6 border-t border-line pt-5">
+        <p className="eyebrow text-faint">Case timeline</p>
+        <ol className="mt-4">
+          {steps.map((step, idx) => (
+            <li key={step} className="relative flex gap-3 pb-4 last:pb-0">
+              {idx < steps.length - 1 && (
+                <span className="absolute left-[6px] top-4 h-[calc(100%-0.7rem)] w-px bg-line" />
+              )}
+              <span
+                className={`relative mt-0.5 size-3.5 shrink-0 rounded-full border-2 ${
+                  idx < currentStep
+                    ? 'border-accent bg-accent'
+                    : idx === currentStep
+                    ? 'border-gold bg-gold anim-pulse'
+                    : 'border-line2 bg-card'
+                }`}
+              />
               <div>
-                <label style={LABEL_S}>Case Type</label>
-                <FSelect value={form.case_type} onChange={e => setForm({ ...form, case_type: e.target.value })}>
-                  <option value="">Select type…</option>
-                  {['Criminal Law','Family & Divorce','Corporate Law','Property Law','Cybercrime','Civil Law','Other'].map(o => <option key={o}>{o}</option>)}
-                </FSelect>
+                <p className={`text-[0.82rem] font-medium ${idx <= currentStep ? 'text-ink' : 'text-faint'}`}>{step}</p>
+                <p className="mt-0.5 text-[0.68rem] text-faint">
+                  {idx < currentStep ? 'Completed' : idx === currentStep ? 'Current stage' : 'Upcoming'}
+                </p>
               </div>
-              <div>
-                <label style={LABEL_S}>Case Date</label>
-                <FInput type="date" value={form.case_date} onChange={e => setForm({ ...form, case_date: e.target.value })} />
-              </div>
-            </div>
+            </li>
+          ))}
+        </ol>
+      </div>
 
-            <Field label="Case Location">
-              <FInput value={form.case_location} onChange={e => setForm({ ...form, case_location: e.target.value })} placeholder="City, Court name…" />
-            </Field>
+      {/* Actions */}
+      <div className="mt-6 grid gap-2 border-t border-line pt-5 sm:grid-cols-2">
+        <ActionButton
+          variant="outline"
+          onClick={() => onViewDocs(item)}
+        >
+          <DocIcon className="size-4" /> {item.document_url ? 'View attached document' : 'View documents vault'}
+        </ActionButton>
+        <ActionButton onClick={() => onToast('Message thread opened', `A secure message thread with ${item.advocate} is ready.`)}>
+          <MessageIcon className="size-4" /> Message advocate
+        </ActionButton>
+      </div>
+    </div>
+  )
+}
 
-            <Field label="Case Description *">
-              <FTextarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe your case in detail — what happened, when it happened, what help you need…" />
-            </Field>
+/* ── Main page ───────────────────────────────────────────────────── */
+const STATUS_FILTERS = ['All', 'Pending', 'Hearing scheduled', 'In progress', 'Order reserved']
 
-            <Field label="Select Lawyer">
-              <FSelect value={form.assigned_lawyer_id} onChange={e => setForm({ ...form, assigned_lawyer_id: e.target.value })}>
-                <option value="">Choose a lawyer…</option>
-                {lawyers.map(l => <option key={l.id} value={l.id}>{l.name} — {l.specialty}</option>)}
-              </FSelect>
-            </Field>
+export default function Cases() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [rawCases, setRawCases] = useState<any[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('ln_cached_cases')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem('ln_cached_cases')
+    } catch { return true }
+  })
+  const [filter, setFilter] = useState('All')
+  const [selected, setSelected] = useState('')
+  const [toast, setToast] = useState<{ title: string; body: string } | null>(null)
+  const [viewDocModalCase, setViewDocModalCase] = useState<CaseItem | null>(null)
 
-            {/* File upload */}
-            <div style={{ marginBottom: 24 }}>
-              <label style={LABEL_S}>Upload Case Document</label>
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) setCaseFile(f) }}
-                style={{ border: `2px dashed ${dragOver ? '#2563EB' : caseFile ? '#10B981' : '#CBD5E1'}`, borderRadius: 13, padding: '32px 20px', textAlign: 'center' as const, background: dragOver ? '#EFF6FF' : caseFile ? '#F0FDF4' : '#F8FAFC', transition: 'all 0.15s', cursor: 'pointer' }}
-              >
-                <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => setCaseFile(e.target.files?.[0] || null)} style={{ display: 'none' }} id="case-file" />
-                <label htmlFor="case-file" style={{ cursor: 'pointer', display: 'block' }}>
-                  <div style={{ fontSize: 34, marginBottom: 10 }}>{caseFile ? '✅' : '📎'}</div>
-                  {caseFile ? (
-                    <>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#065F46', margin: 0 }}>{caseFile.name}</p>
-                      <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 5 }}>Click to change file</p>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', margin: 0 }}>Click or drag & drop to upload</p>
-                      <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 5 }}>PDF, DOC, DOCX, JPG, PNG — Max 10MB</p>
-                    </>
-                  )}
-                </label>
-              </div>
-            </div>
+  const showToast = (title: string, body: string) => {
+    setToast({ title, body })
+    setTimeout(() => setToast(null), 4500)
+  }
 
-            <button
-              onClick={submitCase} disabled={submitting}
-              style={{ width: '100%', padding: '14px 0', background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', color: '#fff', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1, boxShadow: '0 4px 16px rgba(37,99,235,0.30)', transition: 'opacity 0.15s', letterSpacing: '0.02em' }}
-              onMouseEnter={e => { if (!submitting) e.currentTarget.style.opacity = '0.88' }}
-              onMouseLeave={e => { if (!submitting) e.currentTarget.style.opacity = '1' }}
-            >
-              {submitting ? 'Submitting…' : 'Submit Case →'}
-            </button>
-          </div>
+  const loadCases = (silent = false) => {
+    if (!silent && !rawCases.length) setLoading(true)
+    authFetch('/api/cases')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRawCases(data)
+          try { sessionStorage.setItem('ln_cached_cases', JSON.stringify(data)) } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadCases(rawCases.length > 0)
+  }, [])
+
+  const cases: CaseItem[] = useMemo(() => {
+    return rawCases.map((c: any) => {
+      const shortId = `LN-${String(c.id).slice(0, 8).toUpperCase()}`
+      const rawStatus = (c.status || 'Pending').toLowerCase()
+      let status: CaseStatus = 'Pending'
+      let progress = 15
+      let stage = 'Brief submitted'
+
+      if (rawStatus.includes('prog')) { status = 'In progress'; progress = 62; stage = 'Evidence stage' }
+      else if (rawStatus.includes('hear')) { status = 'Hearing scheduled'; progress = 85; stage = 'Hearing scheduled' }
+      else if (rawStatus.includes('reserv') || rawStatus.includes('resolv') || rawStatus.includes('clos')) { status = 'Order reserved'; progress = 100; stage = 'Order reserved' }
+
+      let next = 'Advocate confirmation pending'
+      if (c.hearing_date) {
+        try {
+          next = new Date(c.hearing_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        } catch {}
+      }
+
+      return {
+        id: String(c.id),
+        shortId,
+        title: c.title || c.case_type || 'Untitled matter',
+        type: [c.case_type, c.court].filter(Boolean).join(' · ') || 'General',
+        stage,
+        status,
+        progress,
+        court: c.court || 'District Court',
+        next,
+        advocate: 'Matching in progress',
+        last: c.description || c.summary || 'No additional details.',
+        document_url: c.document_url || null,
+      }
+    })
+  }, [rawCases])
+
+  // Set first case as selected when data loads
+  useEffect(() => {
+    if (cases.length > 0 && !selected) setSelected(cases[0].id)
+  }, [cases])
+
+  const filtered = filter === 'All' ? cases : cases.filter(c => c.status === filter)
+  const activeCase = cases.find(c => c.id === selected) ?? cases[0]
+
+  return (
+    <div className="min-h-screen bg-bg text-ink flex flex-col">
+      <ClientNav />
+
+      {/* Document Viewer Modal */}
+      {viewDocModalCase && (
+        <DocumentViewerModal
+          item={viewDocModalCase}
+          onClose={() => setViewDocModalCase(null)}
+          onDocUpdated={(newUrl) => {
+            setRawCases(prev => prev.map(c => String(c.id) === viewDocModalCase.id ? { ...c, document_url: newUrl } : c))
+            setViewDocModalCase(prev => prev ? { ...prev, document_url: newUrl } : null)
+          }}
+          onToast={showToast}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-2xl border border-line bg-cardsolid p-4 shadow-2xl anim-rise">
+          <p className="text-[0.84rem] font-semibold text-inkstrong">{toast.title}</p>
+          <p className="mt-0.5 text-[0.74rem] text-muted">{toast.body}</p>
         </div>
       )}
 
-      {/* ── Cases List ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {cases.length === 0 ? (
-          <div style={{ background: '#fff', borderRadius: 18, padding: '72px 24px', textAlign: 'center' as const, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 4px rgba(15,23,42,0.04)' }}>
-            <div style={{ fontSize: 56, marginBottom: 18 }}>📂</div>
-            <h3 style={{ fontWeight: 800, fontSize: 18, color: '#0F172A', marginBottom: 8 }}>No cases found</h3>
-            <p style={{ color: '#94A3B8', fontSize: 14, margin: 0 }}>
-              {role === 'client' ? 'Submit your first case to get started' : 'No cases in the system yet'}
-            </p>
-            {role === 'client' && (
-              <button
-                onClick={() => setShowForm(true)}
-                style={{ marginTop: 24, padding: '12px 32px', background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', color: '#fff', border: 'none', borderRadius: 11, fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.28)' }}
-              >
-                Submit a Case
-              </button>
-            )}
-          </div>
-        ) : (
-          cases.map(c => {
-            const lawyer = lawyers.find(l => l.id === c.assigned_lawyer_id)
-            return (
-              <div
-                key={c.id}
-                style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(15,23,42,0.05)', overflow: 'hidden', transition: 'box-shadow 0.18s, border-color 0.18s' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(37,99,235,0.10)'; e.currentTarget.style.borderColor = '#BFDBFE' }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 6px rgba(15,23,42,0.05)'; e.currentTarget.style.borderColor = '#F1F5F9' }}
-              >
-                {/* top accent strip */}
-                <div style={{ height: 4, background: STATUS_CFG[c.status]?.dot ? `linear-gradient(90deg,${STATUS_CFG[c.status].dot},transparent)` : 'linear-gradient(90deg,#2563EB,transparent)' }} />
-
-                {/* header */}
-                <div style={{ padding: '20px 24px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' as const }}>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', margin: '0 0 10px', letterSpacing: '-0.3px' }}>{c.title}</h3>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, alignItems: 'center' }}>
-                        {c.case_type && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 11px', borderRadius: 999 }}>{c.case_type}</span>
-                        )}
-                        <StatusPill status={c.status || 'Pending'} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* body */}
-                <div style={{ padding: '0 24px 24px' }}>
-                  <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.75, marginBottom: 20 }}>{c.description}</p>
-
-                  {/* meta chips */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 18 }}>
-                    {c.case_location && <MetaChip icon="📍" label="Location" value={c.case_location} />}
-                    {c.hearing_date && <MetaChip icon="📅" label="Hearing" value={new Date(c.hearing_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} accent />}
-                    <MetaChip icon="🕐" label="Submitted" value={new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} />
-                  </div>
-
-                  {/* assigned lawyer */}
-                  {lawyer && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: 13, padding: '13px 16px', marginBottom: 16 }}>
-                      {lawyer.profile_image ? (
-                        <img src={lawyer.profile_image} alt={lawyer.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #6EE7B7', flexShrink: 0 }} />
-                      ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#065F46,#10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
-                          {lawyer.name?.charAt(0)}
-                        </div>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: 0 }}>{lawyer.name}</p>
-                        <p style={{ fontSize: 11, color: '#64748B', margin: '2px 0 0' }}>{lawyer.specialty}</p>
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#065F46', background: '#D1FAE5', border: '1px solid #A7F3D0', padding: '4px 12px', borderRadius: 999, whiteSpace: 'nowrap' as const }}>✓ Your Lawyer</span>
-                    </div>
-                  )}
-
-                  {/* document link */}
-                  {c.document_url && (
-                    <div style={{ marginBottom: 16 }}>
-                      <a
-                        href={c.document_url} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '8px 16px', borderRadius: 10, textDecoration: 'none', transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#DBEAFE'; e.currentTarget.style.color = '#1D4ED8' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.color = '#2563EB' }}
-                      >
-                        📎 View Case Document
-                      </a>
-                    </div>
-                  )}
-
-                  {/* lawyer note */}
-                  {c.notes && (
-                    <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, padding: '13px 16px', marginBottom: 16 }}>
-                      <p style={{ fontSize: 10, fontWeight: 800, color: '#92400E', marginBottom: 5, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>📝 Note from Lawyer</p>
-                      <p style={{ fontSize: 13, color: '#78350F', lineHeight: 1.65, margin: 0 }}>{c.notes}</p>
-                    </div>
-                  )}
-
-                  {/* delete */}
-                  {role === 'client' && (
-                    <button
-                      onClick={() => deleteCase(c.id)}
-                      style={{ padding: '8px 18px', background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', fontFamily: FF }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#FFE4E6'; e.currentTarget.style.borderColor = '#FDA4AF' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = '#FFF1F2'; e.currentTarget.style.borderColor = '#FECDD3' }}
-                    >
-                      🗑️ Delete Case
-                    </button>
-                  )}
-                </div>
+      <main className="flex-1 py-10 px-4 sm:px-8">
+        <div className="site-shell">
+          <section>
+            {/* Page header */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="eyebrow text-accent">Case management</span>
+                <h1 className="mt-3 font-display text-[clamp(2rem,4vw,2.8rem)] font-bold text-inkstrong">
+                  Your legal matters
+                </h1>
+                <p className="mt-3 text-[0.88rem] text-muted">
+                  Open a matter to see its document vault, progress and next court date.
+                </p>
               </div>
-            )
-          })
-        )}
-      </div>
-    </section>
+              <div className="flex items-center gap-3 shrink-0">
+                <Badge tone="good">{cases.length} cases on file</Badge>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard?view=submit')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-[0.82rem] font-semibold text-white shadow-[0_8px_24px_-10px_var(--glow-a)] hover:brightness-110 transition cursor-pointer"
+                >
+                  <DocIcon className="size-4" /> Submit new case
+                </button>
+              </div>
+            </div>
+
+            {/* Status filter pills */}
+            <div className="hide-scroll mt-7 flex gap-2 overflow-x-auto pb-1">
+              {STATUS_FILTERS.map(s => (
+                <PillButton key={s} active={filter === s} onClick={() => setFilter(s)}>
+                  {s}
+                </PillButton>
+              ))}
+            </div>
+
+            {/* Loading */}
+            {loading && (
+              <div className="flex items-center justify-center py-20 gap-3">
+                <div className="size-6 rounded-full border-2 border-line border-t-accent animate-spin" />
+                <span className="text-sm text-muted">Loading your cases…</span>
+              </div>
+            )}
+
+            {/* Two-column layout */}
+            {!loading && (
+              <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(18rem,.76fr)_minmax(0,1.24fr)]">
+                {/* Left: case list */}
+                <CaseCardsList cases={filtered} selected={selected} onSelect={setSelected} />
+
+                {/* Right: detail pane */}
+                {activeCase && (
+                  <CaseDetailPane
+                    item={activeCase}
+                    onToast={showToast}
+                    onViewDocs={(c) => setViewDocModalCase(c)}
+                  />
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-line bg-band mt-12">
+        <div className="site-shell flex flex-col items-center justify-between gap-3 py-5 text-center sm:flex-row sm:text-left">
+          <p className="text-[0.72rem] text-faint">© 2026 LegalNexus · Private client workspace</p>
+          <div className="flex items-center gap-4 text-[0.72rem] text-faint">
+            <span className="flex items-center gap-1.5">
+              <ShieldLockIcon className="size-3 text-good" /> Encrypted
+            </span>
+            <a href="mailto:support@legalnexus.in" className="hover:text-ink transition">Support</a>
+            <a href="#" className="hover:text-ink transition">Privacy</a>
+          </div>
+        </div>
+      </footer>
+    </div>
   )
 }

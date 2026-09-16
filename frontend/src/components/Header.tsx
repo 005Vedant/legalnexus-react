@@ -68,13 +68,19 @@ export default function Header() {
   ]
 
   return (
-    <header className="bg-legalnexus-nav text-white sticky top-0 z-50">
+    <header className="bg-legalnexus-nav text-white sticky top-0 z-50 border-b border-white/10 shadow-md">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 
         {/* Logo */}
-        <Link to="/" className="text-xl font-bold text-white flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center">⚖️</div>
-          <span>LegalNexus</span>
+        <Link to="/" className="text-xl font-bold text-white flex items-center gap-3 group">
+          <img
+            src="/logo.jpg"
+            alt="LegalNexus Logo"
+            className="size-10 rounded-2xl object-cover shadow-[0_8px_22px_-6px_rgba(91,134,255,0.65)] ring-1 ring-white/20 transition-all duration-300 group-hover:scale-105"
+          />
+          <span className="font-display text-[1.28rem] font-bold tracking-tight bg-gradient-to-r from-[#5b86ff] via-[#c084fc] to-[#efb75a] bg-clip-text text-transparent drop-shadow-sm">
+            LegalNexus
+          </span>
         </Link>
 
         {/* Desktop Nav */}
@@ -129,7 +135,7 @@ export default function Header() {
               <span className="text-sm font-medium text-white hidden sm:block">
                 {userName}
               </span>
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>

@@ -46,10 +46,20 @@ async function authorizeCaseAccess(req, caseRecord) {
   return { allowed: false, status: 403, message: 'Forbidden' };
 }
 
+const casesCache = new Map(); // userId -> { data, expiresAt }
+
 // Get all cases
 router.get('/', auth, async (req, res) => {
   try {
     const role = getUserRole(req.user);
+    const userId = req.user?.id || 'anon';
+
+    // Fast path: cached response for client
+    const cached = casesCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json(cached.data);
+    }
+
     let query = supabase.from('cases').select('*');
 
     if (role === 'client') {
@@ -63,6 +73,12 @@ router.get('/', auth, async (req, res) => {
 
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error });
+
+    casesCache.set(userId, {
+      data,
+      expiresAt: Date.now() + 10 * 1000,
+    });
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -117,6 +133,9 @@ router.post('/', auth, async (req, res) => {
       inserted = Array.isArray(updated) ? updated[0] : updated;
     }
 
+    // Invalidate cases cache on insert
+    casesCache.clear();
+
     res.status(201).json(inserted);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -151,6 +170,9 @@ router.put('/:id', auth, async (req, res) => {
       console.error('Supabase update error:', error);
       return res.status(500).json({ error });
     }
+
+    // Invalidate cases cache on update
+    casesCache.clear();
 
     res.json(Array.isArray(data) ? data[0] : data);
   } catch (err) {

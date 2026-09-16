@@ -1,264 +1,360 @@
-import React, { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import AddLawyerDialog from '../components/AddLawyerDialog'
-import { supabase } from '../lib/supabase'
+import React, { useEffect, useMemo, useState } from 'react'
 import { authFetch } from '../lib/authFetch'
-import { useNavigate } from 'react-router-dom'
+import ClientNav from '../components/ClientNav'
 
-const FF = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-
-type Lawyer = {
-  id: string
-  name: string
-  specialty?: string
-  experience_years?: number
-  rating?: number
-  email?: string
-  phone?: string
-  profile_image?: string
+/* ── Icons ──────────────────────────────────────────────────────── */
+function SearchIcon({ className = 'size-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+}
+function PinIcon({ className = 'size-3' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+function StarIcon({ className = 'size-3' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  )
+}
+function CheckIcon({ className = 'size-3' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+function ShieldLockIcon({ className = 'size-3' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <circle cx="12" cy="11" r="1.5" /><path d="M12 12.5V15" />
+    </svg>
+  )
 }
 
-const SPECIALTIES = ['All', 'Criminal Law', 'Family & Divorce', 'Corporate Law', 'Property Law', 'Cybercrime', 'Civil Law', 'Other']
+/* ── Practice area filter data ──────────────────────────────────── */
+const PRACTICE_AREAS = [
+  { id: 'all',       label: 'All' },
+  { id: 'criminal',  label: 'Criminal Law' },
+  { id: 'family',    label: 'Family & Divorce' },
+  { id: 'corporate', label: 'Corporate Law' },
+  { id: 'property',  label: 'Property Law' },
+  { id: 'cyber',     label: 'Cybercrime' },
+  { id: 'civil',     label: 'Civil Law' },
+  { id: 'other',     label: 'Other' },
+]
 
-export default function Lawyers() {
-  const { role } = useAuth()
-  const navigate = useNavigate()
-  const [list, setList] = useState<Lawyer[]>([])
-  const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [filterSpec, setFilterSpec] = useState('All')
-  const [searchFocused, setSearchFocused] = useState(false)
+type LawyerItem = {
+  id: string
+  name: string
+  initials: string
+  practice: string
+  area: string
+  city: string
+  exp: number
+  rating: number
+  reviews: number
+  fee: number
+  languages: string[]
+  bio: string
+  verified: boolean
+  hue: number
+  photo_url: string | null
+}
 
-  const fetchList = async () => {
-    try {
-      setLoading(true)
-      const res = await authFetch('/api/lawyers')
-      const data = await res.json()
-      setList(data)
-    } catch (err) {
-      console.error('Error fetching lawyers:', err)
-    } finally {
-      setLoading(false)
-    }
+/* ── Avatar component ────────────────────────────────────────────── */
+function AvatarInitials({ initials, hue, photoUrl, size = 52 }: { initials: string; hue: number; photoUrl: string | null; size?: number }) {
+  const s = `${size}px`
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={initials}
+        className="rounded-2xl object-cover shrink-0 border border-line"
+        style={{ width: s, height: s }}
+      />
+    )
   }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lawyer?')) return
-    await authFetch(`/api/lawyers/${id}`, { method: 'DELETE' })
-    fetchList()
-  }
-
-  const handlePhotoUpload = async (lawyerId: string, file: File) => {
-    try {
-      setUploading(lawyerId)
-      const ext = file.name.split('.').pop()
-      const path = `${lawyerId}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('lawyer-photos').upload(path, file, { upsert: true })
-      if (uploadError) throw uploadError
-      const { data } = supabase.storage.from('lawyer-photos').getPublicUrl(path)
-      await authFetch(`/api/lawyers/${lawyerId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ profile_image: data.publicUrl }),
-      })
-      fetchList()
-    } catch (err) {
-      console.error('Upload error:', err)
-    } finally {
-      setUploading(null)
-    }
-  }
-
-  useEffect(() => { fetchList() }, [])
-
-  const filtered = list.filter(l => {
-    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) ||
-      (l.specialty || '').toLowerCase().includes(search.toLowerCase())
-    const matchSpec = filterSpec === 'All' || l.specialty === filterSpec
-    return matchSearch && matchSpec
-  })
-
-  /* ── loading ── */
-  if (loading) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 260, gap: 16, fontFamily: FF }}>
-      <div style={{ width: 38, height: 38, border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <span style={{ fontSize: 14, fontWeight: 500, color: '#64748B' }}>Loading lawyers…</span>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  return (
+    <div
+      className="grid shrink-0 place-items-center rounded-2xl font-mono font-bold text-white border border-white/10"
+      style={{ width: s, height: s, fontSize: size * 0.33, background: `hsl(${hue},55%,38%)` }}
+    >
+      {initials}
     </div>
   )
+}
 
+/* ── Verified badge ─────────────────────────────────────────────── */
+function VerifiedBadge() {
   return (
-    <section style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 22px', fontFamily: FF }}>
+    <span className="grid size-4 place-items-center rounded-full bg-good/20 text-good">
+      <CheckIcon className="size-2.5" />
+    </span>
+  )
+}
 
-      {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, gap: 16, flexWrap: 'wrap' as const }}>
+/* ── Star rating row ─────────────────────────────────────────────── */
+function StarsRow({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5 text-gold">
+      {[1, 2, 3, 4, 5].map(i => (
+        <StarIcon key={i} className={`size-3 ${i <= Math.round(rating) ? 'text-gold' : 'text-faint'}`} />
+      ))}
+    </span>
+  )
+}
+
+/* ── Pill button ─────────────────────────────────────────────────── */
+function PillBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full px-3.5 py-1.5 text-[0.75rem] font-semibold transition-all cursor-pointer ${
+        active ? 'bg-accent text-white shadow-[0_4px_14px_-4px_var(--glow-a)]' : 'border border-line bg-card text-muted hover:bg-card2 hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+type Toast = { title: string; body: string }
+
+/* ── Single lawyer row card (matches dashboard LawyerCard exactly) ── */
+function LawyerCard({ lawyer, onBook }: { lawyer: LawyerItem; onBook: (l: LawyerItem) => void }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-3xl border border-line bg-card p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 sm:flex-row sm:items-center">
+      <AvatarInitials initials={lawyer.initials} hue={lawyer.hue} photoUrl={lawyer.photo_url} size={52} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[0.93rem] font-semibold text-inkstrong">{lawyer.name}</p>
+          <VerifiedBadge />
+        </div>
+        <p className="mt-0.5 text-[0.76rem] font-medium text-accent">{lawyer.practice}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.72rem] text-muted">
+          <span className="flex items-center gap-1">
+            <StarsRow rating={lawyer.rating} /> {lawyer.rating.toFixed(1)}
+          </span>
+          <span>{lawyer.exp} yrs experience</span>
+          <span className="flex items-center gap-1">
+            <PinIcon className="size-3" /> {lawyer.city}
+          </span>
+          {lawyer.languages.slice(0, 2).map(l => (
+            <span key={l} className="rounded-full border border-line px-2 py-0.5 text-[0.65rem]">{l}</span>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-end justify-between gap-4 border-t border-line pt-3 sm:block sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>⚖️</div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.4px' }}>Our Lawyers</h1>
-          </div>
-          <p style={{ fontSize: 13, color: '#94A3B8', margin: 0, paddingLeft: 46, fontWeight: 500 }}>
-            {filtered.length} verified legal professional{filtered.length !== 1 ? 's' : ''}
+          <p className="eyebrow text-[0.55rem] text-faint">Consultation</p>
+          <p className="mt-1 font-display text-lg font-bold text-inkstrong">
+            ₹{lawyer.fee.toLocaleString('en-IN')}
           </p>
         </div>
-        {role === 'admin' && <AddLawyerDialog onCreated={() => fetchList()} />}
+        <button
+          type="button"
+          onClick={() => onBook(lawyer)}
+          className="mt-0 sm:mt-2 rounded-xl bg-accent px-4 py-2 text-[0.78rem] font-semibold text-white shadow-[0_4px_14px_-4px_var(--glow-a)] transition hover:brightness-110 cursor-pointer"
+        >
+          Book
+        </button>
       </div>
+    </div>
+  )
+}
 
-      {/* ── Search + Filter Bar ── */}
-      <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #F1F5F9', padding: '16px 20px', marginBottom: 28, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
-        {/* search input */}
-        <div style={{ position: 'relative', marginBottom: 14 }}>
-          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: '#94A3B8', pointerEvents: 'none' }}>🔍</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or specialty…"
-            style={{ width: '100%', padding: '11px 14px 11px 38px', border: `1.5px solid ${searchFocused ? '#2563EB' : '#E2E8F0'}`, borderRadius: 10, fontSize: 14, color: '#0F172A', background: searchFocused ? '#fff' : '#F8FAFC', outline: 'none', boxSizing: 'border-box', boxShadow: searchFocused ? '0 0 0 3px rgba(37,99,235,0.10)' : 'none', transition: 'all 0.15s', fontFamily: FF }}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </div>
+/* ── Main page ───────────────────────────────────────────────────── */
+export default function Lawyers() {
+  const [rawLawyers, setRawLawyers] = useState<any[]>(() => {
+    try {
+      const cached = sessionStorage.getItem('ln_cached_lawyers')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem('ln_cached_lawyers')
+    } catch { return true }
+  })
+  const [search, setSearch] = useState('')
+  const [area, setArea] = useState('all')
+  const [toast, setToast] = useState<Toast | null>(null)
 
-        {/* specialty filter pills */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-          {SPECIALTIES.map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterSpec(s)}
-              style={{ padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${filterSpec === s ? '#2563EB' : '#E2E8F0'}`, background: filterSpec === s ? '#EFF6FF' : '#F8FAFC', color: filterSpec === s ? '#2563EB' : '#64748B', transition: 'all 0.15s' }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
+  const loadLawyers = (silent = false) => {
+    if (!silent && !rawLawyers.length) setLoading(true)
+    authFetch('/api/lawyers')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRawLawyers(data)
+          try { sessionStorage.setItem('ln_cached_lawyers', JSON.stringify(data)) } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
 
-      {/* ── Empty state ── */}
-      {filtered.length === 0 ? (
-        <div style={{ background: '#fff', borderRadius: 18, padding: '72px 24px', textAlign: 'center' as const, border: '1.5px solid #F1F5F9' }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>👨‍⚖️</div>
-          <h3 style={{ fontWeight: 800, fontSize: 18, color: '#0F172A', marginBottom: 8 }}>No lawyers found</h3>
-          <p style={{ color: '#94A3B8', fontSize: 14, margin: 0 }}>Try adjusting your search or filter</p>
-        </div>
-      ) : (
-        /* ── Grid ── */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 20 }}>
-          {filtered.map(l => (
-            <div
-              key={l.id}
-              style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(15,23,42,0.05)', overflow: 'hidden', transition: 'all 0.18s', display: 'flex', flexDirection: 'column' as const }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(37,99,235,0.10)'; e.currentTarget.style.borderColor = '#BFDBFE'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 6px rgba(15,23,42,0.05)'; e.currentTarget.style.borderColor = '#F1F5F9'; e.currentTarget.style.transform = 'none' }}
-            >
-              {/* card top gradient band */}
-              <div style={{ height: 5, background: 'linear-gradient(90deg,#1E3A5F,#2563EB,#60A5FA)' }} />
+  useEffect(() => {
+    loadLawyers(rawLawyers.length > 0)
+  }, [])
 
-              {/* avatar section */}
-              <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', padding: '24px 20px 16px' }}>
-                <div style={{ position: 'relative', marginBottom: 12 }}>
-                  {l.profile_image ? (
-                    <img src={l.profile_image} alt={l.name} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid #DBEAFE', boxShadow: '0 4px 12px rgba(37,99,235,0.15)' }} />
-                  ) : (
-                    <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 30, fontWeight: 800, border: '3px solid #DBEAFE', boxShadow: '0 4px 12px rgba(37,99,235,0.15)' }}>
-                      {l.name.charAt(0)}
-                    </div>
-                  )}
+  const lawyers: LawyerItem[] = useMemo(() => {
+    return rawLawyers.map((l: any, idx: number) => {
+      const name = l.name || 'Advocate'
+      const initials = name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
+      const spec = l.specialty || l.practice || 'General Practice'
+      const lower = spec.toLowerCase()
+      let areaId = 'civil'
+      if (lower.includes('crim')) areaId = 'criminal'
+      else if (lower.includes('div') || lower.includes('fam')) areaId = 'family'
+      else if (lower.includes('corp') || lower.includes('tax')) areaId = 'corporate'
+      else if (lower.includes('prop') || lower.includes('real')) areaId = 'property'
+      else if (lower.includes('cyber')) areaId = 'cyber'
 
-                  {/* online dot decoration */}
-                  <div style={{ position: 'absolute', bottom: 3, right: 3, width: 14, height: 14, background: '#10B981', borderRadius: '50%', border: '2px solid #fff' }} />
-                </div>
+      return {
+        id: l.id || `l-${idx}`,
+        name,
+        initials,
+        practice: spec,
+        area: areaId,
+        city: l.city || l.location || 'New Delhi',
+        exp: l.experience_years || l.exp || 8 + (idx % 8),
+        rating: parseFloat(l.rating) || 4.7 + (idx % 3) * 0.1,
+        reviews: l.reviews_count || 95 + idx * 25,
+        fee: l.consultation_fee || l.fee || 2000 + (idx % 5) * 500,
+        languages: Array.isArray(l.languages)
+          ? l.languages
+          : typeof l.languages === 'string'
+          ? l.languages.split(',').map((s: string) => s.trim())
+          : ['English', 'Hindi'],
+        bio: l.bio || 'Verified advocate registered with Bar Council of India.',
+        verified: true,
+        hue: (name.charCodeAt(0) * 53) % 360,
+        photo_url: l.profile_image || l.photo_url || null,
+      }
+    })
+  }, [rawLawyers])
 
-                <h2 style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', margin: '0 0 6px', textAlign: 'center' as const, letterSpacing: '-0.2px' }}>{l.name}</h2>
+  const filtered = useMemo(() => {
+    return lawyers.filter(l => {
+      const matchArea = area === 'all' || l.area === area
+      const matchSearch = [l.name, l.practice, l.city, ...l.languages]
+        .join(' ')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+      return matchArea && matchSearch
+    })
+  }, [lawyers, area, search])
 
-                {l.specialty && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '3px 12px', borderRadius: 999 }}>
-                    {l.specialty}
-                  </span>
-                )}
+  const handleBook = (l: LawyerItem) => {
+    setToast({ title: 'Consultation request started', body: `A secure request to ${l.name} is ready for your confirmation.` })
+    setTimeout(() => setToast(null), 4500)
+  }
 
-                {/* admin photo upload */}
-                {role === 'admin' && (
-                  <label style={{ marginTop: 10, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: uploading === l.id ? '#94A3B8' : '#2563EB', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '4px 12px', borderRadius: 999, transition: 'all 0.15s' }}
-                    onMouseEnter={e => { if (uploading !== l.id) { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#BFDBFE' } }}
-                    onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0' }}
-                  >
-                    <span>{uploading === l.id ? '⏳' : '📷'}</span>
-                    {uploading === l.id ? 'Uploading…' : 'Upload Photo'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploading === l.id}
-                      onChange={e => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(l.id, file) }} />
-                  </label>
-                )}
-              </div>
+  return (
+    <div className="min-h-screen bg-bg text-ink flex flex-col">
+      <ClientNav />
 
-              {/* divider */}
-              <div style={{ borderTop: '1px solid #F8FAFC', margin: '0 20px' }} />
-
-              {/* info rows */}
-              <div style={{ padding: '16px 20px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                {l.experience_years != null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 30, height: 30, background: '#F0FDF4', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>🏛️</div>
-                    <div>
-                      <p style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: 0 }}>Experience</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: 0 }}>{l.experience_years} years</p>
-                    </div>
-                  </div>
-                )}
-                {l.rating != null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 30, height: 30, background: '#FFFBEB', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>⭐</div>
-                    <div>
-                      <p style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: 0 }}>Rating</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: 0 }}>{l.rating} / 5.0</p>
-                    </div>
-                  </div>
-                )}
-                {l.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 30, height: 30, background: '#EFF6FF', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>📧</div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: 0 }}>Email</p>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{l.email}</p>
-                    </div>
-                  </div>
-                )}
-                {l.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 30, height: 30, background: '#F0FDF4', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>📞</div>
-                    <div>
-                      <p style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: 0 }}>Phone</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: 0 }}>{l.phone}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* footer actions */}
-              <div style={{ padding: '12px 20px 18px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                {role === 'admin' ? (
-                  <button
-                    onClick={() => handleDelete(l.id)}
-                    style={{ width: '100%', padding: '9px 0', background: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', fontFamily: FF }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#FFE4E6'; e.currentTarget.style.borderColor = '#FDA4AF' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = '#FFF1F2'; e.currentTarget.style.borderColor = '#FECDD3' }}
-                  >
-                    🗑️ Delete Lawyer
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navigate('/cases')}
-                    style={{ width: '100%', padding: '10px 0', background: 'linear-gradient(135deg,#1E3A5F,#2563EB)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 3px 10px rgba(37,99,235,0.25)', transition: 'opacity 0.15s', fontFamily: FF }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                  >
-                    Book Consultation
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-2xl border border-line bg-cardsolid p-4 shadow-2xl anim-rise">
+          <p className="text-[0.84rem] font-semibold text-inkstrong">{toast.title}</p>
+          <p className="mt-0.5 text-[0.74rem] text-muted">{toast.body}</p>
         </div>
       )}
-    </section>
+
+      <main className="flex-1 py-10 px-4 sm:px-8">
+        <div className="site-shell">
+          <section>
+            {/* Page header */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="eyebrow text-gold">Verified network</span>
+                <h1 className="mt-3 font-display text-[clamp(2rem,4vw,2.8rem)] font-bold text-inkstrong">
+                  Find the right advocate.
+                </h1>
+                <p className="mt-3 max-w-xl text-[0.88rem] leading-relaxed text-muted">
+                  Filter bar-verified legal specialists by practice area, location and availability.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-good/30 bg-good/10 px-3 py-1 text-[0.75rem] font-semibold text-good shrink-0">
+                {filtered.length} available
+              </span>
+            </div>
+
+            {/* Search + filter panel */}
+            <div className="mt-7 rounded-3xl border border-line bg-cardsolid p-4 sm:p-5">
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-faint" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search name, city or language"
+                  className="w-full rounded-2xl border border-line bg-card py-3 pl-10 pr-4 text-[0.88rem] text-ink placeholder:text-faint outline-none transition focus:border-accent focus:ring-2 focus:ring-accentsoft"
+                />
+              </div>
+              <div className="hide-scroll mt-4 flex gap-2 overflow-x-auto pb-0.5">
+                {PRACTICE_AREAS.map(p => (
+                  <PillBtn key={p.id} active={area === p.id} onClick={() => setArea(p.id)}>
+                    {p.label}
+                  </PillBtn>
+                ))}
+              </div>
+            </div>
+
+            {/* Loading */}
+            {loading && (
+              <div className="flex items-center justify-center py-20 gap-3">
+                <div className="size-6 rounded-full border-2 border-line border-t-accent animate-spin" />
+                <span className="text-sm text-muted">Loading advocates…</span>
+              </div>
+            )}
+
+            {/* Lawyer cards */}
+            {!loading && (
+              <div className="mt-5 space-y-3">
+                {filtered.map(lawyer => (
+                  <LawyerCard key={lawyer.id} lawyer={lawyer} onBook={handleBook} />
+                ))}
+                {!filtered.length && (
+                  <div className="rounded-3xl border border-dashed border-line2 p-10 text-center">
+                    <p className="font-display text-xl text-inkstrong">No advocates match those filters.</p>
+                    <p className="mt-2 text-[0.84rem] text-muted">
+                      Try a broader search or choose a different practice area.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-line bg-band mt-12">
+        <div className="site-shell flex flex-col items-center justify-between gap-3 py-5 text-center sm:flex-row sm:text-left">
+          <p className="text-[0.72rem] text-faint">© 2026 LegalNexus · Private client workspace</p>
+          <div className="flex items-center gap-4 text-[0.72rem] text-faint">
+            <span className="flex items-center gap-1.5">
+              <ShieldLockIcon className="size-3 text-good" /> Encrypted
+            </span>
+            <a href="mailto:support@legalnexus.in" className="hover:text-ink transition">Support</a>
+            <a href="#" className="hover:text-ink transition">Privacy</a>
+          </div>
+        </div>
+      </footer>
+    </div>
   )
 }

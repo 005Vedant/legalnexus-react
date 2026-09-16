@@ -31,6 +31,69 @@
   --grid: rgba(255, 255, 255, 0.045);
 }
 
+[data-theme="daylight"], [data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f7fc;
+  --bg-2: #ffffff;
+  --band: #eef2fa;
+  --card: rgba(255, 255, 255, 0.9);
+  --card-solid: #ffffff;
+  --card-2: rgba(12, 22, 48, 0.043);
+  --line: rgba(12, 22, 48, 0.1);
+  --line-2: rgba(12, 22, 48, 0.2);
+  --ink: #0d1730;
+  --ink-strong: #060b18;
+  --muted: #4e5d7d;
+  --faint: #8190b0;
+  --accent: #2e5eff;
+  --accent-soft: rgba(46, 94, 255, 0.12);
+  --accent-ink: #ffffff;
+  --gold: #c98818;
+  --gold-ink: #ffffff;
+  --gold-soft: rgba(201, 136, 24, 0.12);
+  --good: #0ea660;
+  --shadow: 0 24px 60px -24px rgba(12, 22, 48, 0.16);
+  --glow-a: rgba(46, 94, 255, 0.25);
+  --glow-b: rgba(201, 136, 24, 0.15);
+  --grid: rgba(12, 22, 48, 0.04);
+}
+
+.site-shell {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 640px) {
+  .site-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+.hide-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-rise {
+  animation: rise 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background-color: var(--bg);
