@@ -310,6 +310,7 @@ export interface AdminLogItem {
   category: 'assignment' | 'status' | 'hearing' | 'note' | 'lawyer' | 'system'
   title: string
   body: string
+  actor?: string
 }
 
 const PRACTICE_AREAS = [
@@ -633,11 +634,223 @@ export default function AdminDashboard() {
     toastTimeoutRef.current = setTimeout(() => setToast(null), 3800)
   }
 
+  const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all')
+  const [syncingLogs, setSyncingLogs] = useState(false)
+
+  const fetchLiveActivity = async (silent = true) => {
+    try {
+      if (!silent) setSyncingLogs(true)
+      const res = await authFetch('/api/activity')
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          setActivityLog(data)
+        }
+      }
+    } catch (e) {
+      // Ignore background poll errors
+    } finally {
+      if (!silent) setSyncingLogs(false)
+    }
+  }
+
   const logActivity = (category: AdminLogItem['category'], title: string, body: string) => {
-    setActivityLog(prev => [
-      { id: Date.now() + Math.random(), at: Date.now(), category, title, body },
-      ...prev,
-    ])
+    const optimistic: AdminLogItem = {
+      id: Date.now() + Math.random(),
+      at: Date.now(),
+      category,
+      title,
+      body,
+      actor: user?.user_metadata?.full_name || user?.email || 'Admin',
+    }
+    setActivityLog(prev => [optimistic, ...prev])
+    authFetch('/api/activity', {
+      method: 'POST',
+      body: JSON.stringify({ category, title, body }),
+    })
+      .then(() => fetchLiveActivity(true))
+      .catch(() => {})
+  }
+
+  const filteredActivityLogs = useMemo(() => {
+    if (logCategoryFilter === 'all') return activityLog
+    return activityLog.filter(item => item.category === logCategoryFilter)
+  }, [activityLog, logCategoryFilter])
+
+  const exportAuditLogsExcel = () => {
+    const rows = filteredActivityLogs.length > 0 ? filteredActivityLogs : activityLog
+    const escXml = (s: any) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+
+    const xmlRows = rows
+      .map((item, idx) => {
+        const dt = new Date(item.at).toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'medium',
+        })
+        return `<Row>
+          <Cell><Data ss:Type="Number">${idx + 1}</Data></Cell>
+          <Cell><Data ss:Type="String">${escXml(dt)}</Data></Cell>
+          <Cell><Data ss:Type="String">${escXml(item.category.toUpperCase())}</Data></Cell>
+          <Cell><Data ss:Type="String">${escXml(item.title)}</Data></Cell>
+          <Cell><Data ss:Type="String">${escXml(item.body)}</Data></Cell>
+          <Cell><Data ss:Type="String">${escXml(item.actor || 'Admin / System')}</Data></Cell>
+        </Row>`
+      })
+      .join('\n')
+
+    const workbookXml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#13203B" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Administrative Audit Logs">
+  <Table>
+   <Column ss:Width="50"/>
+   <Column ss:Width="150"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="240"/>
+   <Column ss:Width="360"/>
+   <Column ss:Width="140"/>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">#</Data></Cell>
+    <Cell><Data ss:Type="String">Timestamp (IST)</Data></Cell>
+    <Cell><Data ss:Type="String">Category</Data></Cell>
+    <Cell><Data ss:Type="String">Activity / Event Title</Data></Cell>
+    <Cell><Data ss:Type="String">Details &amp; Description</Data></Cell>
+    <Cell><Data ss:Type="String">Actor / Source</Data></Cell>
+   </Row>
+   ${xmlRows}
+  </Table>
+ </Worksheet>
+</Workbook>`
+
+    const blob = new Blob([workbookXml], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    a.href = url
+    a.download = `LegalNexus_Audit_Logs_${dateStamp}.xls`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showToast('Excel exported', `Downloaded ${rows.length} audit log entries in Excel format.`, 'good')
+  }
+
+  const exportAuditLogsPDF = () => {
+    const rows = filteredActivityLogs.length > 0 ? filteredActivityLogs : activityLog
+    const escPdf = (str: string) =>
+      String(str || '')
+        .replace(/[^\x20-\x7E]/g, ' ')
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)')
+
+    const lines: Array<{ text: string; bold?: boolean; size?: number }> = [
+      { text: 'LEGALNEXUS - ADMINISTRATIVE ACTIVITY & SYSTEM AUDIT LOGS', bold: true, size: 14 },
+      {
+        text: `Generated: ${new Date().toLocaleString('en-IN')} | Total Records: ${rows.length} | Filter: ${logCategoryFilter.toUpperCase()}`,
+        size: 9,
+      },
+      { text: '----------------------------------------------------------------------------------------------------', size: 9 },
+    ]
+
+    rows.forEach((item, idx) => {
+      const dt = new Date(item.at).toLocaleString('en-IN')
+      const actor = item.actor || 'Admin / System'
+      lines.push({
+        text: `${idx + 1}. [${item.category.toUpperCase()}] ${item.title} (${dt})`,
+        bold: true,
+        size: 10,
+      })
+      const bodyStr = `   Details: ${item.body} | Actor: ${actor}`
+      if (bodyStr.length > 105) {
+        lines.push({ text: bodyStr.slice(0, 105), size: 9 })
+        lines.push({ text: '   ' + bodyStr.slice(105, 210), size: 9 })
+      } else {
+        lines.push({ text: bodyStr, size: 9 })
+      }
+      lines.push({ text: '', size: 6 })
+    })
+
+    // Paginate into 42 lines per page and build a valid multi-page PDF 1.4 document
+    const linesPerPage = 42
+    const pageChunks: Array<typeof lines> = []
+    for (let i = 0; i < lines.length; i += linesPerPage) {
+      pageChunks.push(lines.slice(i, i + linesPerPage))
+    }
+    if (pageChunks.length === 0) pageChunks.push(lines)
+
+    const objects: string[] = []
+    // 1: Catalog, 2: Pages, 3: Font F1 (Helvetica), 4: Font F2 (Helvetica-Bold)
+    const pageObjIds: number[] = []
+    const contentObjIds: number[] = []
+    let nextId = 5
+    for (let p = 0; p < pageChunks.length; p++) {
+      pageObjIds.push(nextId++)
+      contentObjIds.push(nextId++)
+    }
+
+    objects[1] = `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`
+    objects[2] = `2 0 obj\n<< /Type /Pages /Kids [${pageObjIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pageObjIds.length} >>\nendobj\n`
+    objects[3] = `3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`
+    objects[4] = `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`
+
+    pageChunks.forEach((chunk, idx) => {
+      const pageId = pageObjIds[idx]
+      const contentId = contentObjIds[idx]
+      let y = 800
+      const streamLines: string[] = ['BT']
+      chunk.forEach(line => {
+        const font = line.bold ? '/F2' : '/F1'
+        const size = line.size || 9
+        streamLines.push(`${font} ${size} Tf`)
+        streamLines.push(`1 0 0 1 40 ${y} Tm`)
+        streamLines.push(`(${escPdf(line.text)}) Tj`)
+        y -= size + 7
+      })
+      streamLines.push('ET')
+      const streamContent = streamLines.join('\n')
+      objects[pageId] = `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`
+      objects[contentId] = `${contentId} 0 obj\n<< /Length ${streamContent.length} >>\nstream\n${streamContent}\nendstream\nendobj\n`
+    })
+
+    let pdf = '%PDF-1.4\n'
+    const offsets: number[] = [0]
+    for (let i = 1; i < nextId; i++) {
+      offsets[i] = pdf.length
+      pdf += objects[i]
+    }
+    const xrefOffset = pdf.length
+    pdf += `xref\n0 ${nextId}\n0000000000 65535 f \n`
+    for (let i = 1; i < nextId; i++) {
+      pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`
+    }
+    pdf += `trailer\n<< /Size ${nextId} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+
+    const blob = new Blob([pdf], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    a.href = url
+    a.download = `LegalNexus_Audit_Logs_${dateStamp}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showToast('PDF exported', `Downloaded ${rows.length} audit log entries in PDF format.`, 'good')
   }
 
   useEffect(() => {
@@ -664,17 +877,23 @@ export default function AdminDashboard() {
 
   const loadAllData = async () => {
     try {
-      const [lawyersRes, casesRes, profilesRes] = await Promise.all([
+      const [lawyersRes, casesRes, profilesRes, activityRes] = await Promise.all([
         authFetch('/api/lawyers'),
         authFetch('/api/cases'),
         authFetch('/api/profiles'),
+        authFetch('/api/activity'),
       ])
 
-      const [lawyersData, casesData, profilesData] = await Promise.all([
+      const [lawyersData, casesData, profilesData, activityData] = await Promise.all([
         lawyersRes.json(),
         casesRes.json(),
         profilesRes.json(),
+        activityRes.ok ? activityRes.json() : Promise.resolve([]),
       ])
+
+      if (Array.isArray(activityData) && activityData.length > 0) {
+        setActivityLog(activityData)
+      }
 
       // Format lawyers
       if (Array.isArray(lawyersData)) {
@@ -773,6 +992,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadAllData()
+    const interval = setInterval(() => {
+      fetchLiveActivity(true)
+    }, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   // ─── Computed Workloads & Counts ──────────────────────────────────────────
@@ -2478,36 +2701,115 @@ export default function AdminDashboard() {
                 sub="Every case assignment, status change, hearing schedule, and lawyer approval is logged chronologically."
                 tone="gold"
                 right={
-                  <Badge tone="good">
-                    <ShieldLockIcon className="size-3 inline mr-1" /> Logged Admin Session
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Badge tone="good">
+                      <ShieldLockIcon className="size-3 inline mr-1" /> Logged Admin Session
+                    </Badge>
+                    <button
+                      type="button"
+                      onClick={() => fetchLiveActivity(false)}
+                      disabled={syncingLogs}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card2 hover:bg-card px-3.5 py-1.5 text-[0.72rem] font-bold text-ink transition cursor-pointer disabled:opacity-50"
+                    >
+                      <span>{syncingLogs ? 'Syncing…' : '↻ Sync Live'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportAuditLogsPDF}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-goldsoft hover:bg-gold/25 px-3.5 py-1.5 text-[0.72rem] font-bold text-gold transition cursor-pointer"
+                    >
+                      <span>⬇ Download PDF</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportAuditLogsExcel}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 hover:bg-good/25 px-3.5 py-1.5 text-[0.72rem] font-bold text-good transition cursor-pointer"
+                    >
+                      <span>⬇ Download Excel</span>
+                    </button>
+                  </div>
                 }
               />
 
+              {/* Category Filter Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'all', label: 'All Events' },
+                    { id: 'system', label: 'System' },
+                    { id: 'assignment', label: 'Assignments' },
+                    { id: 'status', label: 'Case Status' },
+                    { id: 'hearing', label: 'Hearings' },
+                    { id: 'lawyer', label: 'Advocates' },
+                    { id: 'note', label: 'Notes' },
+                  ].map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setLogCategoryFilter(cat.id)}
+                      className={`rounded-full px-3.5 py-1.5 text-[0.72rem] font-bold transition cursor-pointer border ${
+                        logCategoryFilter === cat.id
+                          ? 'border-gold/50 bg-goldsoft text-gold'
+                          : 'border-line bg-card2 text-muted hover:text-ink'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono text-[0.68rem] text-faint">
+                  Showing {filteredActivityLogs.length} real-time audit event(s) · Auto-refreshing every 5s
+                </span>
+              </div>
+
               <div className="rounded-3xl border border-line bg-cardsolid p-6 sm:p-8 shadow-[var(--shadow)]">
                 <div className="space-y-6">
-                  {activityLog.map((item, idx) => {
-                    const meta = CATEGORY_META[item.category] || CATEGORY_META.system
-                    return (
-                      <div key={item.id} className="relative flex items-start gap-4">
-                        {idx < activityLog.length - 1 && (
-                          <span className="absolute left-[17px] top-10 h-[calc(100%+1.5rem)] w-px bg-line" />
-                        )}
+                  {filteredActivityLogs.length === 0 ? (
+                    <div className="py-10 text-center text-sm text-muted">
+                      No audit events match this filter yet.
+                    </div>
+                  ) : (
+                    filteredActivityLogs.map((item, idx) => {
+                      const meta = CATEGORY_META[item.category] || CATEGORY_META.system
+                      const exactTime = new Date(item.at).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                      return (
+                        <div key={item.id} className="relative flex items-start gap-4">
+                          {idx < filteredActivityLogs.length - 1 && (
+                            <span className="absolute left-[17px] top-10 h-[calc(100%+1.5rem)] w-px bg-line" />
+                          )}
 
-                        <span className={`relative grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-card2 text-xs font-bold ${meta.cls}`}>
-                          ●
-                        </span>
+                          <span className={`relative grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-card2 text-xs font-bold ${meta.cls}`}>
+                            ●
+                          </span>
 
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="font-bold text-[0.88rem] text-inkstrong">{item.title}</h4>
-                            <span className="font-mono text-[0.66rem] text-faint">{formatRelativeTime(item.at)}</span>
+                          <div className="min-w-0 flex-1 pt-0.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="font-bold text-[0.88rem] text-inkstrong">{item.title}</h4>
+                                <span className="rounded-md border border-line bg-card2 px-2 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-muted">
+                                  {item.category}
+                                </span>
+                                {item.actor && (
+                                  <span className="font-mono text-[0.62rem] text-faint">
+                                    by {item.actor}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-[0.66rem] text-faint" title={exactTime}>
+                                {formatRelativeTime(item.at)} · {exactTime}
+                              </span>
+                            </div>
+                            <p className="text-[0.78rem] text-muted mt-1 leading-relaxed">{item.body}</p>
                           </div>
-                          <p className="text-[0.78rem] text-muted mt-1 leading-relaxed">{item.body}</p>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  )}
                 </div>
               </div>
 

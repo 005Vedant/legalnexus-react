@@ -73,6 +73,15 @@ router.post('/', auth, async (req, res) => {
         .eq('id', existingProfile.id)
         .select();
       if (error) return res.status(500).json({ error });
+      cachedLawyers = null;
+      if (typeof supabase.logSystemActivity === 'function') {
+        await supabase.logSystemActivity({
+          category: 'lawyer',
+          title: `Advocate profile updated: ${payload.name || existingProfile.name}`,
+          body: `Specialty: ${payload.specialty || existingProfile.specialty || 'General Practice'}`,
+          actor: req.user?.email || 'Admin',
+        });
+      }
       return res.status(200).json(data[0]);
     }
 
@@ -82,6 +91,15 @@ router.post('/', auth, async (req, res) => {
       .insert(payload)
       .select();
     if (error) return res.status(500).json({ error });
+    cachedLawyers = null;
+    if (typeof supabase.logSystemActivity === 'function') {
+      await supabase.logSystemActivity({
+        category: 'lawyer',
+        title: `New advocate onboarded: ${payload.name || 'Advocate'}`,
+        body: `${payload.specialty || 'General Practice'} · ${payload.experience_years || 5} yrs experience.`,
+        actor: req.user?.email || 'Admin',
+      });
+    }
     res.status(201).json(data[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -97,6 +115,7 @@ router.put('/:id', auth, async (req, res) => {
       .eq('id', req.params.id)
       .select();
     if (error) return res.status(500).json({ error });
+    cachedLawyers = null;
     res.json(data[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -115,6 +134,7 @@ router.delete('/:id', auth, async (req, res) => {
       .delete()
       .eq('id', req.params.id);
     if (error) return res.status(500).json({ error });
+    cachedLawyers = null;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

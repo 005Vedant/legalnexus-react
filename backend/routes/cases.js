@@ -136,6 +136,15 @@ router.post('/', auth, async (req, res) => {
     // Invalidate cases cache on insert
     casesCache.clear();
 
+    if (typeof supabase.logSystemActivity === 'function') {
+      await supabase.logSystemActivity({
+        category: 'status',
+        title: `New matter filed: "${payload.title}"`,
+        body: `Practice area: ${payload.case_type} · Location: ${payload.case_location || 'Court'} · Status: ${payload.status}`,
+        actor: req.user?.user_metadata?.full_name || req.user?.email || 'Client',
+      });
+    }
+
     res.status(201).json(inserted);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -174,6 +183,39 @@ router.put('/:id', auth, async (req, res) => {
     // Invalidate cases cache on update
     casesCache.clear();
 
+    if (typeof supabase.logSystemActivity === 'function') {
+      const actor = req.user?.user_metadata?.full_name || req.user?.email || 'Admin';
+      if (updates.status && updates.status !== existingCase.status) {
+        await supabase.logSystemActivity({
+          category: 'status',
+          title: `Status changed to ${updates.status}`,
+          body: `Matter "${existingCase.title}" updated from ${existingCase.status || 'Pending'} to ${updates.status}.`,
+          actor,
+        });
+      } else if (updates.assigned_lawyer_id !== undefined && updates.assigned_lawyer_id !== existingCase.assigned_lawyer_id) {
+        await supabase.logSystemActivity({
+          category: 'assignment',
+          title: updates.assigned_lawyer_id ? 'Advocate assigned to matter' : 'Advocate unassigned from matter',
+          body: `Matter "${existingCase.title}" assignment updated.`,
+          actor,
+        });
+      } else if (updates.hearing_date && updates.hearing_date !== existingCase.hearing_date) {
+        await supabase.logSystemActivity({
+          category: 'hearing',
+          title: `Hearing date scheduled (${updates.hearing_date})`,
+          body: `Matter "${existingCase.title}" scheduled for hearing on ${updates.hearing_date}.`,
+          actor,
+        });
+      } else if (updates.notes !== undefined) {
+        await supabase.logSystemActivity({
+          category: 'note',
+          title: 'Case notes & details updated',
+          body: `Matter "${existingCase.title}" — ${updates.notes ? updates.notes.slice(0, 120) : 'Notes updated'}.`,
+          actor,
+        });
+      }
+    }
+
     res.json(Array.isArray(data) ? data[0] : data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -203,6 +245,17 @@ router.delete('/:id', auth, async (req, res) => {
       .eq('id', req.params.id);
 
     if (error) return res.status(500).json({ error });
+
+    casesCache.clear();
+    if (typeof supabase.logSystemActivity === 'function') {
+      await supabase.logSystemActivity({
+        category: 'system',
+        title: `Matter removed: "${existingCase.title}"`,
+        body: `Case record deleted by ${req.user?.email || 'Admin'}.`,
+        actor: req.user?.email || 'Admin',
+      });
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

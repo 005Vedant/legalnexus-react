@@ -9,6 +9,7 @@ const ALLOWED_COLLECTIONS = new Set([
   'hearings',
   'faqs',
   'reviews',
+  'activity_logs',
 ]);
 
 // POST /api/db/:collection

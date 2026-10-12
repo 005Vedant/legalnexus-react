@@ -40,6 +40,7 @@ const faqs = require('./routes/faqs');
 const hearings = require('./routes/hearings');
 const profiles = require('./routes/profiles');
 const reviews = require('./routes/reviews');
+const activity = require('./routes/activity');
 
 db.initDatabase();
 
@@ -47,6 +48,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 app.use('/api/auth', authRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/db', dbRoutes);
+app.use('/api/activity', activity);
 app.use('/api/lawyers', lawyers);
 app.use('/api/cases', cases);
 app.use('/api/faqs', faqs);

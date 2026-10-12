@@ -104,6 +104,17 @@ const INITIAL_DATA = {
       created_at: new Date().toISOString(),
     },
   ],
+  activity_logs: [
+    {
+      id: 'log-init-1',
+      at: Date.now() - 5 * 60 * 1000,
+      category: 'system',
+      title: 'MongoDB & Cloudflare R2 storage engine active',
+      body: 'Database collections and document storage buckets synchronized with real-time audit logging.',
+      actor: 'System',
+      created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    },
+  ],
 };
 
 function loadFallbackStore() {
@@ -543,12 +554,39 @@ async function registerUser({ email, password, full_name, role = 'client', bar_e
     });
   }
 
+  await logSystemActivity({
+    category: cleanRole === 'lawyer' ? 'lawyer' : 'system',
+    title: `New ${cleanRole} account registered`,
+    body: `${newUser.full_name} (${normalizedEmail}) joined LegalNexus as ${cleanRole}.`,
+    actor: newUser.full_name,
+  });
+
   const session = signUserToken(newUser);
   return { data: { user: session.user, session }, error: null };
 }
 
 const DEFAULT_ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'admin@legalnexus.in').trim().toLowerCase();
 const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@123';
+
+async function logSystemActivity({ category = 'system', title, body, actor = 'System' }) {
+  try {
+    const now = Date.now();
+    const entry = {
+      id: crypto.randomUUID(),
+      at: now,
+      category,
+      title: String(title || 'System Activity'),
+      body: String(body || ''),
+      actor: String(actor || 'System'),
+      created_at: new Date(now).toISOString(),
+    };
+    await new QueryBuilder('activity_logs').insert(entry);
+    return entry;
+  } catch (err) {
+    console.warn('Failed to write activity log:', err.message);
+    return null;
+  }
+}
 
 async function ensureAdminUser() {
   const { data: existingAdmin } = await new QueryBuilder('users').select('*').eq('email', DEFAULT_ADMIN_EMAIL).maybeSingle();
@@ -632,6 +670,13 @@ async function loginUser({ email, password }) {
     return { data: null, error: { message: 'Invalid email or password' } };
   }
 
+  await logSystemActivity({
+    category: 'system',
+    title: `${existing.role === 'admin' ? 'Administrator' : 'User'} session authenticated`,
+    body: `${existing.full_name || existing.email} signed in (${existing.role || 'client'} portal).`,
+    actor: existing.full_name || existing.email,
+  });
+
   const session = signUserToken(existing);
   return { data: { user: session.user, session }, error: null };
 }
@@ -677,6 +722,7 @@ const db = {
     loginUser,
     signUserToken,
   },
+  logSystemActivity,
   initDatabase,
   getStatus: () => ({
     provider: isMongoConnected ? 'mongodb' : 'mongodb-local-fallback',
