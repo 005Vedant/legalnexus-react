@@ -6,7 +6,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../hooks/useAuth"
 
 type AuthMode = "login" | "signup"
-type Role = "client" | "lawyer"
+type Role = "client" | "lawyer" | "admin"
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -63,10 +63,21 @@ export default function Auth() {
 
   const onLogin = async (data: LoginData) => {
     setMessage(null); setAuthError(null); setSubmitting(true)
-    const { error } = await signIn(data.email, data.password)
+    const { data: resData, error } = await signIn(data.email, data.password)
     setSubmitting(false)
     if (error) { setAuthError(error.message); return }
+    const signedInRole = resData?.user?.role || resData?.user?.user_metadata?.role
+    if (signedInRole === "admin") {
+      navigate("/admin")
+      return
+    }
     navigate("/")
+  }
+
+  const handleAdminQuickLogin = async () => {
+    loginForm.setValue("email", "admin@legalnexus.in")
+    loginForm.setValue("password", "Admin@123")
+    await onLogin({ email: "admin@legalnexus.in", password: "Admin@123" })
   }
 
   const onSignup = async (data: SignupData) => {
@@ -228,6 +239,21 @@ export default function Auth() {
                     {submitting ? "Signing in…" : <><span>Sign In</span><span>→</span></>}
                   </button>
 
+                  <div className="pt-2 border-t border-[#1a2540]">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={handleAdminQuickLogin}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[#111a2e] hover:bg-[#172440] border border-[#253555] text-[#efb75a] text-xs font-semibold transition-all flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>🛡️</span>
+                        <span>Admin Portal Login (admin@legalnexus.in)</span>
+                      </span>
+                      <span>→</span>
+                    </button>
+                  </div>
+
                   <p className="text-center text-xs text-[#4a5a7a] pt-1">
                     New to LegalNexus?{" "}
                     <button type="button" onClick={() => setMode("signup")} className="text-[#5b86ff] hover:text-[#7ba3ff] font-semibold transition-colors">
@@ -242,22 +268,23 @@ export default function Auth() {
                   {/* Role selector */}
                   <div>
                     <p className="text-[11px] font-mono font-bold uppercase tracking-[0.12em] text-[#7a8ab0] mb-2.5">I Am Joining As</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-2.5">
                       {([
-                        { id: "client" as Role, label: "Client", desc: "I need legal help", icon: "👤" },
-                        { id: "lawyer" as Role, label: "Advocate", desc: "I provide legal help", icon: "👨‍⚖️" },
+                        { id: "client" as Role, label: "Client", desc: "Legal help", icon: "👤" },
+                        { id: "lawyer" as Role, label: "Advocate", desc: "Counsel", icon: "👨‍⚖️" },
+                        { id: "admin" as Role, label: "Admin", desc: "Platform", icon: "🛡️" },
                       ]).map(r => (
                         <button key={r.id} type="button" onClick={() => setRole(r.id)}
-                          className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
+                          className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left ${
                             role === r.id
                               ? "border-[#5b86ff] bg-[#0d1a35]"
                               : "border-[#1a2540] bg-[#0a1020] hover:border-[#253555]"
                           }`}>
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0 ${role === r.id ? "bg-[#5b86ff]/20" : "bg-[#111e35]"}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 ${role === r.id ? "bg-[#5b86ff]/20" : "bg-[#111e35]"}`}>
                             {r.icon}
                           </div>
                           <div>
-                            <p className={`text-sm font-bold ${role === r.id ? "text-white" : "text-[#7a8ab0]"}`}>{r.label}</p>
+                            <p className={`text-xs font-bold ${role === r.id ? "text-white" : "text-[#7a8ab0]"}`}>{r.label}</p>
                             <p className="text-[10px] text-[#3d4f6e]">{r.desc}</p>
                           </div>
                         </button>
@@ -309,7 +336,7 @@ export default function Auth() {
 
                   <button type="submit" disabled={submitting || !agreedTerms}
                     className="w-full py-3.5 rounded-full bg-[#4f7eff] hover:bg-[#5b86ff] text-white text-sm font-bold shadow-[0_0_24px_rgba(91,134,255,0.4)] hover:shadow-[0_0_32px_rgba(91,134,255,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2">
-                    {submitting ? "Creating account…" : <><span>Create {role === "client" ? "Client" : "Advocate"} Account</span><span>→</span></>}
+                    {submitting ? "Creating account…" : <><span>Create {role === "client" ? "Client" : role === "lawyer" ? "Advocate" : "Admin"} Account</span><span>→</span></>}
                   </button>
 
                   <p className="text-center text-xs text-[#4a5a7a] pt-1">
