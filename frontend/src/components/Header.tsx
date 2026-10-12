@@ -207,7 +207,25 @@ export default function Header() {
                     <span className="text-lg">🏠</span>
                     <div>
                       <p className="font-medium">Dashboard</p>
-                      <p className="text-xs text-gray-400">Go to your dashboard</p>
+                      <p className="text-xs text-gray-400">Go to default dashboard</p>
+                    </div>
+                  </Link>
+
+                  <Link to="/admin" onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50 text-amber-900 text-sm font-medium transition">
+                    <span className="text-lg">🛡️</span>
+                    <div>
+                      <p className="font-medium text-amber-950">Admin Console</p>
+                      <p className="text-xs text-amber-700">Triage matters, load & hearings</p>
+                    </div>
+                  </Link>
+
+                  <Link to="/lawyer" onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-900 text-sm font-medium transition">
+                    <span className="text-lg">⚖️</span>
+                    <div>
+                      <p className="font-medium text-indigo-950">Lawyer Workspace</p>
+                      <p className="text-xs text-indigo-700">Advocate court docket & files</p>
                     </div>
                   </Link>
 

@@ -16,7 +16,7 @@ let tokenExpiresAt = 0
 // Listen to auth state changes to invalidate or update token cache immediately
 supabase.auth.onAuthStateChange((_event, session) => {
   cachedToken = session?.access_token || null
-  tokenExpiresAt = Date.now() + 15 * 1000
+  tokenExpiresAt = Date.now() + 60 * 1000
 })
 
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
@@ -24,12 +24,13 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
 
   if (!token || Date.now() > tokenExpiresAt) {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      token = session?.access_token || null
+      const { data } = await supabase.auth.getSession()
+      token = data?.session?.access_token || null
       cachedToken = token
-      tokenExpiresAt = Date.now() + 15 * 1000
+      tokenExpiresAt = Date.now() + 60 * 1000
     } catch {
       token = null
+      tokenExpiresAt = Date.now() + 15 * 1000
     }
   }
 

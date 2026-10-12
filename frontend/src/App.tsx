@@ -33,17 +33,27 @@ export default function App() {
   const location = useLocation()
   if (loading) return <div className="flex justify-center items-center h-screen text-gray-600">Loading...</div>
 
-  // Hide the global header/footer for all client pages — they use their own nav
-  const isClientShell = user && role === 'client'
+  const dedicatedPaths = ['/admin', '/admin-dashboard', '/lawyer', '/lawyer-dashboard', '/client', '/client-dashboard']
+  const isDedicatedPath = dedicatedPaths.some(p => location.pathname.toLowerCase().startsWith(p))
+  const isDedicatedShell = isDedicatedPath || (user && (role === 'client' || role === 'lawyer' || role === 'admin'))
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col">
-      {user && !isClientShell && <Header />}
+      {user && !isDedicatedShell && <Header />}
       <main className="flex-1">
         <Routes>
           <Route path="/" element={user ? <RoleDashboard /> : <Home />} />
           <Route path="/auth" element={!user ? <Auth /> : <Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<ProtectedRoute><RoleDashboard /></ProtectedRoute>} />
+          
+          {/* Explicit Dashboard Routes */}
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/lawyer" element={<LawyerDashboard />} />
+          <Route path="/lawyer-dashboard" element={<LawyerDashboard />} />
+          <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/client-dashboard" element={<ClientDashboard />} />
+
           <Route path="/lawyers" element={<ProtectedRoute><Lawyers /></ProtectedRoute>} />
           <Route path="/cases" element={<ProtectedRoute><Cases /></ProtectedRoute>} />
           <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
@@ -51,7 +61,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {location.pathname !== '/auth' && !isClientShell && <Footer />}
+      {location.pathname !== '/auth' && !isDedicatedShell && <Footer />}
     </div>
   )
 }

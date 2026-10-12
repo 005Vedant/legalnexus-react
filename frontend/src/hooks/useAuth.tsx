@@ -68,13 +68,36 @@ function initAuth() {
     }
   }
 
-  supabase.auth.getSession().then(({ data }) => {
-    syncUserAndRole(data.session?.user || null)
+  supabase.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      console.warn('Supabase auth session expired or invalid:', error.message)
+      try {
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+      } catch {}
+      syncUserAndRole(null)
+      return
+    }
+    syncUserAndRole(data?.session?.user || null)
+  }).catch((err) => {
+    console.warn('Failed to connect to Supabase auth:', err)
+    syncUserAndRole(null)
   })
 
-  supabase.auth.onAuthStateChange((_event, session) => {
-    syncUserAndRole(session?.user || null)
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      syncUserAndRole(null)
+    } else {
+      syncUserAndRole(session.user || null)
+    }
   })
+
+  // Safety fallback in case network resolution hangs or Supabase is paused
+  setTimeout(() => {
+    if (globalLoading) {
+      globalLoading = false
+      notify()
+    }
+  }, 1500)
 }
 
 export function useAuth() {
