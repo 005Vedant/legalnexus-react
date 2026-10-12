@@ -967,7 +967,7 @@ export default function LawyerDashboard() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col antialiased selection:bg-accent/20">
+    <div className="min-h-screen bg-bg text-ink flex flex-col md:flex-row antialiased selection:bg-accent/20">
       
       {/* ── Floating Toast Alert ── */}
       {toast && (
@@ -1006,26 +1006,35 @@ export default function LawyerDashboard() {
         />
       )}
 
-      {/* ── Header: Advocate Navigation Bar (`Pb`) ── */}
-      <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-xl">
-        <div className="site-shell flex h-[4.5rem] items-center justify-between gap-4">
-          
+      {/* ── Left Sidebar Navigation (`Pb`) ── */}
+      <aside className="sticky top-0 z-40 flex w-full md:h-screen md:w-64 shrink-0 flex-col justify-between border-b md:border-b-0 md:border-r border-line bg-cardsolid/95 p-4 backdrop-blur-xl">
+        <div className="space-y-6">
           {/* Logo */}
-          <button
-            onClick={() => setView('overview')}
-            className="flex items-center gap-2.5 text-left group cursor-pointer"
-          >
-            <span className="relative grid size-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-[#2a3f9e] text-white shadow-[0_8px_22px_-11px_var(--glow-a)]">
-              <ScaleIcon className="size-[17px]" />
-              <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/25" />
-            </span>
-            <span className="font-display text-[1.04rem] font-semibold tracking-tight text-inkstrong">
-              LegalNexus
-            </span>
-          </button>
+          <div className="flex items-center justify-between px-2 pt-1">
+            <button
+              onClick={() => setView('overview')}
+              className="flex items-center gap-2.5 text-left group cursor-pointer"
+            >
+              <span className="relative grid size-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-[#2a3f9e] text-white shadow-[0_8px_22px_-11px_var(--glow-a)]">
+                <ScaleIcon className="size-[17px]" />
+                <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/25" />
+              </span>
+              <span className="flex flex-col leading-none">
+                <span className="font-display text-[1.06rem] font-semibold tracking-tight text-inkstrong">
+                  LegalNexus
+                </span>
+                <span className="eyebrow mt-1 text-[0.48rem] text-gold tracking-widest uppercase">
+                  Advocate Portal
+                </span>
+              </span>
+            </button>
+          </div>
 
-          {/* Navigation Tabs */}
-          <nav className="hide-scroll hidden items-center gap-1 md:flex">
+          {/* Vertical Navigation Tabs */}
+          <nav className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+            <p className="hidden md:block px-3 pb-1 text-[0.62rem] font-mono uppercase tracking-[0.14em] text-faint">
+              Workspace Menu
+            </p>
             {NAV_TABS.map(tab => {
               const Icon = tab.icon
               const isActive = view === tab.id
@@ -1033,156 +1042,167 @@ export default function LawyerDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setView(tab.id as any)}
-                  className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-[0.78rem] font-semibold transition-all duration-300 cursor-pointer ${
+                  className={`flex shrink-0 md:w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-[0.82rem] font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-accentsoft text-accent'
-                      : 'text-muted hover:bg-card hover:text-ink'
+                      ? 'bg-accentsoft text-accent border border-accent/30 shadow-xs'
+                      : 'text-muted hover:bg-card hover:text-ink border border-transparent'
                   }`}
                 >
-                  <Icon className="size-3.5" />
+                  <Icon className="size-4 shrink-0" />
                   <span>{tab.label}</span>
                 </button>
               )
             })}
           </nav>
+        </div>
 
-          {/* Right Controls: Intake Toggle, Theme, Notifications, Profile Dropdown */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            
-            {/* Intake toggle switch */}
-            <button
-              onClick={handleToggleAccepting}
-              title={acceptingMatters ? 'Accepting new client matters' : 'Matter intake is paused'}
-              className={`hidden sm:inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[0.75rem] font-semibold transition-all duration-300 cursor-pointer ${
-                acceptingMatters
-                  ? 'border-good/30 bg-good/10 text-good'
-                  : 'border-line bg-card text-muted hover:border-line2'
-              }`}
-            >
+        {/* Bottom Sidebar Controls: Intake Toggle, Theme, Notifications, Profile Dropdown */}
+        <div className="hidden md:flex flex-col gap-3 border-t border-line pt-4">
+          {/* Intake toggle switch */}
+          <button
+            onClick={handleToggleAccepting}
+            title={acceptingMatters ? 'Accepting new client matters' : 'Matter intake is paused'}
+            className={`flex w-full items-center justify-between rounded-xl border px-3.5 py-2 text-[0.75rem] font-semibold transition-all duration-300 cursor-pointer ${
+              acceptingMatters
+                ? 'border-good/30 bg-good/10 text-good'
+                : 'border-line bg-card text-muted hover:border-line2'
+            }`}
+          >
+            <span className="flex items-center gap-2">
               <span
                 className={`size-2 rounded-full ${
                   acceptingMatters ? 'bg-good anim-pulse' : 'bg-faint'
                 }`}
               />
               <span>{acceptingMatters ? 'Accepting matters' : 'Intake paused'}</span>
-            </button>
+            </span>
+            <span className="text-[0.65rem] font-mono uppercase opacity-75">
+              {acceptingMatters ? 'ON' : 'OFF'}
+            </span>
+          </button>
 
-            {/* Theme Toggle */}
+          {/* Theme & Notifications Row */}
+          <div className="flex items-center gap-2">
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
               title="Toggle theme"
-              className="grid size-9 place-items-center rounded-xl border border-line bg-card text-muted transition-all hover:border-accent hover:text-accent cursor-pointer"
+              className="flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition-all hover:border-accent hover:text-accent cursor-pointer"
             >
               {theme === 'midnight' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+              <span>Theme</span>
             </button>
 
-            {/* Notifications Button */}
             <button
               onClick={() =>
                 showToast('Court diary up to date', 'Next appearance: Sharma Traders v. Anand Enterprises (Saket Court).')
               }
               aria-label="Notifications"
               title="Notifications"
-              className="relative grid size-9 place-items-center rounded-xl border border-line bg-card text-muted transition-all hover:border-accent hover:text-accent cursor-pointer"
+              className="relative flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition-all hover:border-accent hover:text-accent cursor-pointer"
             >
               <BellIcon className="size-4" />
-              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-gold" />
+              <span>Alerts</span>
+              <span className="size-1.5 rounded-full bg-gold" />
             </button>
+          </div>
 
-            {/* Advocate Account Dropdown */}
-            <div className="relative" ref={accountRef}>
-              <button
-                onClick={() => setAccountMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 rounded-xl border border-line bg-card p-1.5 pl-2 transition hover:border-line2 hover:bg-card2 cursor-pointer"
-              >
+          {/* Advocate Account Dropdown */}
+          <div className="relative" ref={accountRef}>
+            <button
+              onClick={() => setAccountMenuOpen(prev => !prev)}
+              className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-card p-2 transition hover:border-line2 hover:bg-card2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
                 {profile?.profile_image ? (
                   <img
                     src={profile.profile_image}
                     alt={advocateName}
-                    className="size-7 rounded-lg object-cover ring-1 ring-white/20"
+                    className="size-8 shrink-0 rounded-lg object-cover ring-1 ring-white/20"
                   />
                 ) : (
-                  <div className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-[#2a3f9e] font-mono text-xs font-bold text-white shadow-xs">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent to-[#2a3f9e] font-mono text-xs font-bold text-white shadow-xs">
                     {advocateInitials}
                   </div>
                 )}
-                <div className="hidden text-left sm:block">
-                  <p className="text-[0.78rem] font-semibold leading-tight text-ink">{advocateName}</p>
-                  <span className="block text-[0.63rem] text-gold font-medium">Advocate · Bar Council</span>
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-[0.78rem] font-semibold leading-tight text-ink">{advocateName}</p>
+                  <span className="block truncate text-[0.63rem] text-gold font-medium">Advocate · Bar Council</span>
                 </div>
-                <ChevronDownIcon
-                  className={`hidden size-3.5 text-faint transition-transform sm:block ${
-                    accountMenuOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
+              </div>
+              <ChevronDownIcon
+                className={`size-3.5 shrink-0 text-faint transition-transform ${
+                  accountMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-              {accountMenuOpen && (
-                <div className="anim-rise absolute right-0 top-[calc(100%+0.6rem)] z-50 w-60 rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
-                  <div className="border-b border-line px-3 py-2.5">
-                    <p className="text-[0.8rem] font-semibold text-ink">{advocateName}</p>
-                    <p className="truncate text-[0.68rem] text-muted">{user?.email || profile?.email || ''}</p>
-                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accentsoft px-2 py-0.5 text-[0.62rem] font-semibold text-accent">
-                      ✓ Bar Council Verified
-                    </span>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setProfileModalOpen(true)
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>⚖️</span> Chamber & Profile Settings
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('matters')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>📋</span> My Matters ({matters.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('drafts')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>✍️</span> Draft Studio
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('hearings')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>📅</span> Hearing Planner
-                    </button>
-                  </div>
-                  <div className="border-t border-line pt-1">
-                    <button
-                      onClick={async () => {
-                        await signOut()
-                        navigate('/auth')
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
-                    >
-                      <span>🚪</span> Sign Out
-                    </button>
-                  </div>
+            {accountMenuOpen && (
+              <div className="anim-rise absolute left-0 bottom-[calc(100%+0.6rem)] z-50 w-full rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
+                <div className="border-b border-line px-3 py-2.5">
+                  <p className="text-[0.8rem] font-semibold text-ink">{advocateName}</p>
+                  <p className="truncate text-[0.68rem] text-muted">{user?.email || profile?.email || ''}</p>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accentsoft px-2 py-0.5 text-[0.62rem] font-semibold text-accent">
+                    ✓ Bar Council Verified
+                  </span>
                 </div>
-              )}
-            </div>
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      setProfileModalOpen(true)
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>⚖️</span> Chamber & Profile Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('matters')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>📋</span> My Matters ({matters.length})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('drafts')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>✍️</span> Draft Studio
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('hearings')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>📅</span> Hearing Planner
+                  </button>
+                </div>
+                <div className="border-t border-line pt-1">
+                  <button
+                    onClick={async () => {
+                      await signOut()
+                      navigate('/auth')
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+                  >
+                    <span>🚪</span> Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </header>
+      </aside>
 
+      {/* ── Main Content Wrapper ── */}
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* ── Main Content Area ── */}
       <main className="flex-1 py-7 sm:py-10">
         <div className="site-shell space-y-8">
@@ -2111,6 +2131,7 @@ export default function LawyerDashboard() {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* ── Chamber & Profile Settings Modal ── */}
       {profileModalOpen && (

@@ -1368,7 +1368,7 @@ export default function AdminDashboard() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col antialiased selection:bg-gold/20">
+    <div className="min-h-screen bg-bg text-ink flex flex-col lg:flex-row antialiased selection:bg-gold/20">
       
       {/* ── Floating Toast Alert ── */}
       {toast && (
@@ -1407,31 +1407,35 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* ── Executive Header: Admin Console Bar (`Kv`) ── */}
-      <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-xl">
-        <div className="site-shell flex h-[4.5rem] items-center justify-between gap-4">
-          
+      {/* ── Executive Left Sidebar: Admin Console Navigation (`Kv`) ── */}
+      <aside className="sticky top-0 z-40 flex w-full lg:h-screen lg:w-64 shrink-0 flex-col justify-between border-b lg:border-b-0 lg:border-r border-line bg-cardsolid/95 p-4 backdrop-blur-xl">
+        <div className="space-y-6">
           {/* Logo with Admin Console Badge */}
-          <button
-            onClick={() => setView('overview')}
-            className="flex items-center gap-2.5 text-left group cursor-pointer"
-          >
-            <span className="relative grid size-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-[#2a3f9e] text-white shadow-[0_8px_22px_-11px_var(--glow-a)]">
-              <ScaleIcon className="size-[17px]" />
-              <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/25" />
-            </span>
-            <span className="flex flex-col leading-none">
-              <span className="font-display text-[1.04rem] font-semibold tracking-tight text-inkstrong">
-                LegalNexus
+          <div className="flex items-center justify-between px-2 pt-1">
+            <button
+              onClick={() => setView('overview')}
+              className="flex items-center gap-2.5 text-left group cursor-pointer"
+            >
+              <span className="relative grid size-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-[#2a3f9e] text-white shadow-[0_8px_22px_-11px_var(--glow-a)]">
+                <ScaleIcon className="size-[17px]" />
+                <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/25" />
               </span>
-              <span className="eyebrow mt-1 text-[0.49rem] text-gold tracking-widest uppercase">
-                Admin console
+              <span className="flex flex-col leading-none">
+                <span className="font-display text-[1.06rem] font-semibold tracking-tight text-inkstrong">
+                  LegalNexus
+                </span>
+                <span className="eyebrow mt-1 text-[0.49rem] text-gold tracking-widest uppercase">
+                  Admin console
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          </div>
 
-          {/* Nav Tabs */}
-          <nav className="hide-scroll hidden items-center gap-1 lg:flex">
+          {/* Vertical Nav Tabs */}
+          <nav className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+            <p className="hidden lg:block px-3 pb-1 text-[0.62rem] font-mono uppercase tracking-[0.14em] text-faint">
+              Governance Menu
+            </p>
             {NAV_TABS.map(tab => {
               const Icon = tab.icon
               const isActive = view === tab.id
@@ -1439,16 +1443,18 @@ export default function AdminDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setView(tab.id as any)}
-                  className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-[0.78rem] font-semibold transition-all duration-300 cursor-pointer ${
+                  className={`flex shrink-0 lg:w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-[0.82rem] font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-goldsoft text-gold font-bold shadow-xs'
-                      : 'text-muted hover:bg-card hover:text-ink'
+                      ? 'bg-goldsoft text-gold font-bold border border-gold/30 shadow-xs'
+                      : 'text-muted hover:bg-card hover:text-ink border border-transparent'
                   }`}
                 >
-                  <Icon className="size-3.5" />
-                  <span>{tab.label}</span>
+                  <span className="flex items-center gap-3">
+                    <Icon className="size-4 shrink-0" />
+                    <span>{tab.label}</span>
+                  </span>
                   {tab.id === 'cases' && unassignedCount > 0 && (
-                    <span className="grid min-w-4 place-items-center rounded-full bg-gold px-1 font-mono text-[0.56rem] font-bold text-goldink">
+                    <span className="grid min-w-4 place-items-center rounded-full bg-gold px-1.5 font-mono text-[0.58rem] font-bold text-goldink">
                       {unassignedCount}
                     </span>
                   )}
@@ -1456,18 +1462,20 @@ export default function AdminDashboard() {
               )
             })}
           </nav>
+        </div>
 
-          {/* Right Controls: Theme, Unassigned Notification Dot, Admin Avatar Dropdown */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            
+        {/* Bottom Controls: Theme, Unassigned Notification, Admin Avatar Dropdown */}
+        <div className="hidden lg:flex flex-col gap-3 border-t border-line pt-4">
+          <div className="flex items-center gap-2">
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
               title="Toggle theme"
-              className="hidden size-9 place-items-center rounded-xl border border-line bg-card text-muted transition-all hover:border-gold hover:text-gold sm:grid cursor-pointer"
+              className="flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition-all hover:border-gold hover:text-gold cursor-pointer"
             >
               {theme === 'midnight' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+              <span>Theme</span>
             </button>
 
             {/* Unassigned Quick Notification Button */}
@@ -1478,151 +1486,131 @@ export default function AdminDashboard() {
               }}
               aria-label={`${unassignedCount} cases need a lawyer`}
               title="Unassigned triage queue"
-              className="relative grid size-9 place-items-center rounded-xl border border-line bg-card text-muted transition hover:border-gold hover:text-gold cursor-pointer"
+              className="relative flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition hover:border-gold hover:text-gold cursor-pointer"
             >
               <BellIcon className="size-4" />
+              <span>Triage</span>
               {unassignedCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-gold anim-pulse" />
+                <span className="size-1.5 rounded-full bg-gold anim-pulse" />
               )}
             </button>
+          </div>
 
-            {/* Admin Avatar Dropdown */}
-            <div className="relative" ref={accountRef}>
-              <button
-                onClick={() => setAccountMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 rounded-xl border border-line bg-card p-1.5 pl-2 transition hover:border-line2 hover:bg-card2 cursor-pointer"
-              >
+          {/* Admin Avatar Dropdown */}
+          <div className="relative" ref={accountRef}>
+            <button
+              onClick={() => setAccountMenuOpen(prev => !prev)}
+              className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-card p-2 transition hover:border-line2 hover:bg-card2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
                 <AvatarInitials initials="AD" hue={42} size={30} />
-                <div className="hidden text-left sm:block">
-                  <span className="block text-[0.74rem] font-bold leading-tight text-ink">Administrator</span>
-                  <span className="block text-[0.63rem] text-gold font-medium">Full Access Console</span>
+                <div className="min-w-0 text-left">
+                  <span className="block truncate text-[0.76rem] font-bold leading-tight text-ink">Administrator</span>
+                  <span className="block truncate text-[0.63rem] text-gold font-medium">Full Access Console</span>
                 </div>
-                <ChevronDownIcon
-                  className={`hidden size-3.5 text-faint transition-transform sm:block ${
-                    accountMenuOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
+              </div>
+              <ChevronDownIcon
+                className={`size-3.5 shrink-0 text-faint transition-transform ${
+                  accountMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-              {accountMenuOpen && (
-                <div className="anim-rise absolute right-0 top-[calc(100%+0.6rem)] z-50 w-56 rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
-                  <div className="border-b border-line px-3 py-2.5">
-                    <p className="text-[0.8rem] font-bold text-ink">Administrator Root</p>
-                    <p className="truncate text-[0.68rem] text-muted">{user?.email || 'admin@legalnexus.in'}</p>
-                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-goldsoft px-2 py-0.5 text-[0.62rem] font-bold text-gold">
-                      🛡️ System Operator
-                    </span>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setView('overview')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>📊</span> Operational Overview
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('cases')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>📋</span> Master Cases ({cases.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('lawyers')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>⚖️</span> Lawyer Network & Load
-                    </button>
-                    <button
-                      onClick={() => {
-                        setView('clients')
-                        setAccountMenuOpen(false)
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>👥</span> Client Directory ({clients.length})
-                    </button>
-                  </div>
-                  <div className="border-t border-line py-1">
-                    <button
-                      onClick={() => {
-                        setAccountMenuOpen(false)
-                        navigate('/client')
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>👤</span> Switch to Client Portal
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAccountMenuOpen(false)
-                        navigate('/lawyer')
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>⚖️</span> Switch to Lawyer Workspace
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAccountMenuOpen(false)
-                        navigate('/')
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                    >
-                      <span>🏠</span> Public Landing Page
-                    </button>
-                  </div>
-                  <div className="border-t border-line pt-1">
-                    <button
-                      onClick={async () => {
-                        await signOut()
-                        navigate('/auth')
-                      }}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer text-left"
-                    >
-                      <span>🚪</span> Sign Out
-                    </button>
-                  </div>
+            {accountMenuOpen && (
+              <div className="anim-rise absolute left-0 bottom-[calc(100%+0.6rem)] z-50 w-full rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
+                <div className="border-b border-line px-3 py-2.5">
+                  <p className="text-[0.8rem] font-bold text-ink">Administrator Root</p>
+                  <p className="truncate text-[0.68rem] text-muted">{user?.email || 'admin@legalnexus.in'}</p>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-goldsoft px-2 py-0.5 text-[0.62rem] font-bold text-gold">
+                    🛡️ System Operator
+                  </span>
                 </div>
-              )}
-            </div>
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      setView('overview')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>📊</span> Operational Overview
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('cases')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>📋</span> Master Cases ({cases.length})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('lawyers')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>⚖️</span> Lawyer Network & Load
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView('clients')
+                      setAccountMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>👥</span> Client Directory ({clients.length})
+                  </button>
+                </div>
+                <div className="border-t border-line py-1">
+                  <button
+                    onClick={() => {
+                      setAccountMenuOpen(false)
+                      navigate('/client')
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>👤</span> Switch to Client Portal
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAccountMenuOpen(false)
+                      navigate('/lawyer')
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>⚖️</span> Switch to Lawyer Workspace
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAccountMenuOpen(false)
+                      navigate('/')
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                  >
+                    <span>🏠</span> Public Landing Page
+                  </button>
+                </div>
+                <div className="border-t border-line pt-1">
+                  <button
+                    onClick={async () => {
+                      await signOut()
+                      navigate('/auth')
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer text-left"
+                  >
+                    <span>🚪</span> Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+      </aside>
 
-        {/* Mobile Navigation Tabs Strip */}
-        <div className="site-shell hide-scroll flex gap-1 overflow-x-auto pb-2 lg:hidden">
-          {NAV_TABS.map(tab => {
-            const Icon = tab.icon
-            const isActive = view === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setView(tab.id as any)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.72rem] font-semibold transition ${
-                  isActive ? 'bg-goldsoft text-gold font-bold' : 'text-muted'
-                }`}
-              >
-                <Icon className="size-3.5" />
-                <span>{tab.label}</span>
-                {tab.id === 'cases' && unassignedCount > 0 && (
-                  <span className="grid min-w-4 place-items-center rounded-full bg-gold px-1 font-mono text-[0.56rem] font-bold text-goldink">
-                    {unassignedCount}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </header>
-
+      {/* ── Main Content Wrapper ── */}
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* ── Main Content Area ── */}
       <main className="flex-1 py-7 sm:py-10">
         <div className="site-shell space-y-8">
@@ -2833,6 +2821,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* ── Onboard Lawyer Direct Modal ── */}
       {addLawyerOpen && (
