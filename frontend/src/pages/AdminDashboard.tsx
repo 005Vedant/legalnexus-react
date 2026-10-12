@@ -1464,18 +1464,27 @@ export default function AdminDashboard() {
           </nav>
         </div>
 
-        {/* Bottom Controls: Theme, Unassigned Notification, Admin Avatar Dropdown */}
-        <div className="hidden lg:flex flex-col gap-3 border-t border-line pt-4">
-          <div className="flex items-center gap-2">
+        <div className="hidden lg:block border-t border-line pt-3 px-2">
+          <p className="text-[0.65rem] font-mono text-faint flex items-center gap-1.5">
+            <ShieldLockIcon className="size-3 text-gold" /> System Operator Active
+          </p>
+        </div>
+      </aside>
+
+      {/* ── Main Content Wrapper ── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* ── Top-Right Controls Bar ── */}
+        <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-xl">
+          <div className="site-shell flex h-16 items-center justify-end gap-2.5 sm:gap-3">
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
               title="Toggle theme"
-              className="flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition-all hover:border-gold hover:text-gold cursor-pointer"
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-line bg-card text-xs font-medium text-muted transition-all hover:border-gold hover:text-gold cursor-pointer"
             >
               {theme === 'midnight' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
-              <span>Theme</span>
+              <span className="hidden sm:inline">Theme</span>
             </button>
 
             {/* Unassigned Quick Notification Button */}
@@ -1486,131 +1495,126 @@ export default function AdminDashboard() {
               }}
               aria-label={`${unassignedCount} cases need a lawyer`}
               title="Unassigned triage queue"
-              className="relative flex flex-1 items-center justify-center gap-2 h-9 rounded-xl border border-line bg-card text-xs font-medium text-muted transition hover:border-gold hover:text-gold cursor-pointer"
+              className="relative inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-line bg-card text-xs font-medium text-muted transition hover:border-gold hover:text-gold cursor-pointer"
             >
               <BellIcon className="size-4" />
-              <span>Triage</span>
+              <span className="hidden sm:inline">Alerts</span>
               {unassignedCount > 0 && (
                 <span className="size-1.5 rounded-full bg-gold anim-pulse" />
               )}
             </button>
-          </div>
 
-          {/* Admin Avatar Dropdown */}
-          <div className="relative" ref={accountRef}>
-            <button
-              onClick={() => setAccountMenuOpen(prev => !prev)}
-              className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-card p-2 transition hover:border-line2 hover:bg-card2 cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            {/* Admin Avatar Dropdown */}
+            <div className="relative" ref={accountRef}>
+              <button
+                onClick={() => setAccountMenuOpen(prev => !prev)}
+                className="flex items-center gap-2.5 rounded-xl border border-line bg-card p-1.5 pl-2 pr-2.5 transition hover:border-line2 hover:bg-card2 cursor-pointer"
+              >
                 <AvatarInitials initials="AD" hue={42} size={30} />
-                <div className="min-w-0 text-left">
-                  <span className="block truncate text-[0.76rem] font-bold leading-tight text-ink">Administrator</span>
-                  <span className="block truncate text-[0.63rem] text-gold font-medium">Full Access Console</span>
+                <div className="hidden text-left sm:block">
+                  <span className="block text-[0.76rem] font-bold leading-tight text-ink">Administrator</span>
+                  <span className="block text-[0.63rem] text-gold font-medium">Full Access Console</span>
                 </div>
-              </div>
-              <ChevronDownIcon
-                className={`size-3.5 shrink-0 text-faint transition-transform ${
-                  accountMenuOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+                <ChevronDownIcon
+                  className={`size-3.5 text-faint transition-transform ${
+                    accountMenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
 
-            {accountMenuOpen && (
-              <div className="anim-rise absolute left-0 bottom-[calc(100%+0.6rem)] z-50 w-full rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
-                <div className="border-b border-line px-3 py-2.5">
-                  <p className="text-[0.8rem] font-bold text-ink">Administrator Root</p>
-                  <p className="truncate text-[0.68rem] text-muted">{user?.email || 'admin@legalnexus.in'}</p>
-                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-goldsoft px-2 py-0.5 text-[0.62rem] font-bold text-gold">
-                    🛡️ System Operator
-                  </span>
+              {accountMenuOpen && (
+                <div className="anim-rise absolute right-0 top-[calc(100%+0.6rem)] z-50 w-56 rounded-2xl border border-line bg-cardsolid p-1.5 shadow-[var(--shadow)]">
+                  <div className="border-b border-line px-3 py-2.5">
+                    <p className="text-[0.8rem] font-bold text-ink">Administrator Root</p>
+                    <p className="truncate text-[0.68rem] text-muted">{user?.email || 'admin@legalnexus.in'}</p>
+                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-goldsoft px-2 py-0.5 text-[0.62rem] font-bold text-gold">
+                      🛡️ System Operator
+                    </span>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setView('overview')
+                        setAccountMenuOpen(false)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>📊</span> Operational Overview
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('cases')
+                        setAccountMenuOpen(false)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>📋</span> Master Cases ({cases.length})
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('lawyers')
+                        setAccountMenuOpen(false)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>⚖️</span> Lawyer Network & Load
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('clients')
+                        setAccountMenuOpen(false)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>👥</span> Client Directory ({clients.length})
+                    </button>
+                  </div>
+                  <div className="border-t border-line py-1">
+                    <button
+                      onClick={() => {
+                        setAccountMenuOpen(false)
+                        navigate('/client')
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>👤</span> Switch to Client Portal
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAccountMenuOpen(false)
+                        navigate('/lawyer')
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>⚖️</span> Switch to Lawyer Workspace
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAccountMenuOpen(false)
+                        navigate('/')
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
+                    >
+                      <span>🏠</span> Public Landing Page
+                    </button>
+                  </div>
+                  <div className="border-t border-line pt-1">
+                    <button
+                      onClick={async () => {
+                        await signOut()
+                        navigate('/auth')
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer text-left"
+                    >
+                      <span>🚪</span> Sign Out
+                    </button>
+                  </div>
                 </div>
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      setView('overview')
-                      setAccountMenuOpen(false)
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>📊</span> Operational Overview
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView('cases')
-                      setAccountMenuOpen(false)
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>📋</span> Master Cases ({cases.length})
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView('lawyers')
-                      setAccountMenuOpen(false)
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>⚖️</span> Lawyer Network & Load
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView('clients')
-                      setAccountMenuOpen(false)
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>👥</span> Client Directory ({clients.length})
-                  </button>
-                </div>
-                <div className="border-t border-line py-1">
-                  <button
-                    onClick={() => {
-                      setAccountMenuOpen(false)
-                      navigate('/client')
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>👤</span> Switch to Client Portal
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAccountMenuOpen(false)
-                      navigate('/lawyer')
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>⚖️</span> Switch to Lawyer Workspace
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAccountMenuOpen(false)
-                      navigate('/')
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-[0.75rem] text-muted transition hover:bg-card hover:text-ink cursor-pointer text-left"
-                  >
-                    <span>🏠</span> Public Landing Page
-                  </button>
-                </div>
-                <div className="border-t border-line pt-1">
-                  <button
-                    onClick={async () => {
-                      await signOut()
-                      navigate('/auth')
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[0.78rem] text-red-400 transition hover:bg-red-500/10 hover:text-red-300 cursor-pointer text-left"
-                  >
-                    <span>🚪</span> Sign Out
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </aside>
+        </header>
 
-      {/* ── Main Content Wrapper ── */}
-      <div className="flex min-w-0 flex-1 flex-col">
       {/* ── Main Content Area ── */}
       <main className="flex-1 py-7 sm:py-10">
         <div className="site-shell space-y-8">
